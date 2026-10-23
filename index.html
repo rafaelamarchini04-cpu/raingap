@@ -450,6 +450,7 @@ async function geocodeAll(q){
   q=q.trim(); const ll=q.match(/^(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)$/);
   if(ll) return [{lat:+ll[1], lon:+ll[3], label:q}];
   let out=[];
+  if(looksLikeAddress(q)){ try{ out=(await census(q)).map(x=>({lat:x.lat,lon:x.lon,label:x.label})); if(out.length) return out; }catch(e){} }
   try{
     const j=await getJSON("https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&q="+encodeURIComponent(q));
     out=j.map(r=>{ const a=r.address||{}; const town=a.city||a.town||a.village||a.hamlet||r.name||q.split(",")[0];
@@ -483,6 +484,27 @@ async function photon(q,near,limit=6){
     });
   } finally{ clearTimeout(timer); }
 }
+// US Census address lookup (free, covers nearly every US street address). Loaded as JSONP, which works without CORS.
+const looksLikeAddress=q=>/^\s*\d+[a-z]?\s+\S+\s+\S+/i.test(q);
+let censusN=0;
+function census(q){
+  return new Promise((resolve,reject)=>{
+    const cb="__census"+(++censusN), sc=document.createElement("script");
+    const done=(fn,v)=>{ clearTimeout(t); try{ delete window[cb]; }catch(_){ window[cb]=undefined; } sc.remove(); fn(v); };
+    const t=setTimeout(()=>done(reject,new Error("timed out")),9000);
+    window[cb]=j=>{
+      const m=((j&&j.result&&j.result.addressMatches)||[]).map(a=>{
+        const parts=a.matchedAddress.split(","); const main=parts[0].replace(/\b\w+/g,w=>w[0]+w.slice(1).toLowerCase());
+        const sub=parts.slice(1).map(x=>x.trim()).filter(Boolean).join(", ").replace(/\b[A-Z]{3,}\b/g,w=>w[0]+w.slice(1).toLowerCase());
+        return {lat:a.coordinates.y, lon:a.coordinates.x, main, sub:sub+" · US address", label:main+", "+sub};
+      });
+      done(resolve,m);
+    };
+    sc.onerror=()=>done(reject,new Error("lookup failed"));
+    sc.src=`https://geocoding.geo.census.gov/geocoder/locations/onelineaddress?benchmark=Public_AR_Current&format=jsonp&callback=${cb}&address=${encodeURIComponent(q)}`;
+    document.head.appendChild(sc);
+  });
+}
 const picked={from:null,to:null};
 function setupAC(id){
   const input=$(id), list=$(id+"-list"); let timer=null, items=[], active=-1, req=0;
@@ -499,9 +521,14 @@ function setupAC(id){
     list.innerHTML='<li class="ac-note">Searching…</li>'; list.hidden=false; input.setAttribute("aria-expanded","true");
     timer=setTimeout(async()=>{
       const my=++req, other=picked[id==="from"?"to":"from"]||(id==="to"&&hereCoords)||null;
-      try{ const res=await photon(q,other,6); if(my!==req) return; items=res; active=-1; draw(); }
-      catch(e){ if(my!==req) return; items=[]; list.innerHTML=`<li class="ac-note">Suggestions didn't load (${esc(e.name==="AbortError"?"timed out":e.message||"error")}). You can still tap Find my dry window.</li>`; list.hidden=false; }
-    },300);
+      const tasks=[photon(q,other,6)]; if(looksLikeAddress(q)) tasks.push(census(q));
+      const out=await Promise.allSettled(tasks); if(my!==req) return;
+      const ph=out[0].status==="fulfilled"?out[0].value:[], ce=out[1]&&out[1].status==="fulfilled"?out[1].value:[];
+      items=[...ce,...ph]; active=-1;
+      if(!items.length&&out.every(o=>o.status==="rejected")){ const e=out[0].reason||{}; list.innerHTML=`<li class="ac-note">Suggestions didn't load (${esc(e.name==="AbortError"?"timed out":e.message||"error")}). You can still tap Find my dry window.</li>`; list.hidden=false; return; }
+      if(!items.length&&looksLikeAddress(q)){ list.innerHTML='<li class="ac-note">No match yet. Add the city and state, like "50 Ventures Dr, St Augustine, FL".</li>'; list.hidden=false; return; }
+      draw();
+    },looksLikeAddress(q)?600:300);
   });
   input.addEventListener("keydown",e=>{
     if(list.hidden||!items.length) return;
