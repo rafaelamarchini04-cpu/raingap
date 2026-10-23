@@ -496,9 +496,11 @@ function setupAC(id){
   input.addEventListener("input",()=>{
     picked[id]=null; input.classList.remove("picked"); clearTimeout(timer);
     const q=input.value.trim(); if(q.length<3||q==="My location"){ close(); return; }
+    list.innerHTML='<li class="ac-note">Searching…</li>'; list.hidden=false; input.setAttribute("aria-expanded","true");
     timer=setTimeout(async()=>{
       const my=++req, other=picked[id==="from"?"to":"from"]||(id==="to"&&hereCoords)||null;
-      try{ const res=await photon(q,other,6); if(my!==req) return; items=res; active=-1; draw(); }catch(e){ if(my===req) close(); }
+      try{ const res=await photon(q,other,6); if(my!==req) return; items=res; active=-1; draw(); }
+      catch(e){ if(my!==req) return; items=[]; list.innerHTML=`<li class="ac-note">Suggestions didn't load (${esc(e.name==="AbortError"?"timed out":e.message||"error")}). You can still tap Find my dry window.</li>`; list.hidden=false; }
     },300);
   });
   input.addEventListener("keydown",e=>{
