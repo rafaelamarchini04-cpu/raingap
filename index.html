@@ -146,6 +146,15 @@ section.card{background:var(--surface);border:1px solid var(--line);box-shadow:v
 .stretches .msg{color:var(--muted);font-size:.9rem}
 .cafes .grp{font:600 1rem var(--display);color:var(--accent);padding:14px 0 4px;border-top:0}
 button.soft{align-self:flex-start;background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.ac{position:relative;flex:1;min-width:0}
+.ac-list{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:40;list-style:none;margin:0;padding:6px;background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:0 12px 30px rgba(20,30,80,.22);max-height:320px;overflow:auto}
+.ac-list li{display:flex;flex-direction:column;gap:1px;padding:10px 12px;border-radius:12px;cursor:pointer}
+.ac-list li b{font-weight:800;overflow-wrap:anywhere}
+.ac-list li span{font-size:.85rem;color:var(--muted);overflow-wrap:anywhere}
+.ac-list li[aria-selected="true"],.ac-list li:hover{background:var(--accent-soft)}
+.ac-list .ac-note{cursor:default;color:var(--muted);font-size:.88rem}
+.ac-list .ac-note:hover{background:none}
+.picked{box-shadow:0 0 0 2px var(--r1) inset}
 .switch{display:flex;align-items:center;gap:12px;cursor:pointer;font-weight:700}
 .switch input{position:absolute;opacity:0;width:1px;height:1px}
 .switch .knob{flex:none;width:48px;height:28px;border-radius:999px;background:var(--dry);position:relative;transition:background .15s}
@@ -225,13 +234,13 @@ details.more[open]>summary{margin-bottom:20px}
     <div class="field">
       <label class="label" for="from">From</label>
       <div class="row">
-        <input id="from" name="from" placeholder="Where are you leaving from?" required>
+        <div class="ac"><input id="from" name="from" placeholder="Address or city" required role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="from-list"><ul class="ac-list" id="from-list" role="listbox" hidden></ul></div>
         <button type="button" id="hereBtn" title="Use where I am now">📍 Here</button>
       </div>
     </div>
     <div class="field">
       <label class="label" for="to">To</label>
-      <input id="to" name="to" placeholder="Where are you going?" required>
+      <div class="ac"><input id="to" name="to" placeholder="Address or city" required role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="to-list"><ul class="ac-list" id="to-list" role="listbox" hidden></ul></div>
     </div>
     <div class="field">
       <label class="label" for="window">When could you leave?</label>
@@ -447,13 +456,60 @@ async function geocodeAll(q){
       const region=a.state||a.region||a.county||""; const cc=(a.country_code||"").toUpperCase();
       return {lat:+r.lat, lon:+r.lon, label:[town, region, cc&&cc!=="US"?a.country:""].filter(Boolean).join(", ")}; });
   }catch(e){}
+  if(!out.length){ try{ out=(await photon(q,null,6)).map(x=>({lat:x.lat,lon:x.lon,label:x.label})); }catch(e){} }
   if(!out.length){
     const name=q.split(",")[0].trim();
     const j=await getJSON("https://geocoding-api.open-meteo.com/v1/search?count=6&name="+encodeURIComponent(name));
     out=(j.results||[]).map(r=>({lat:r.latitude, lon:r.longitude, label:[r.name, r.admin1, r.country_code!=="US"?r.country:""].filter(Boolean).join(", ")}));
   }
-  if(!out.length) throw Object.assign(new Error(`Couldn't find "${q}". Try adding the state, like "Santa Fe, NM".`),{plainMsg:true});
+  if(!out.length) throw Object.assign(new Error(`Couldn't find "${q}". Start typing and pick it from the suggestions.`),{plainMsg:true});
   return out;
+}
+// Photon: OpenStreetMap search made for typing-as-you-go, good with street addresses
+async function photon(q,near,limit=6){
+  let url=`https://photon.komoot.io/api/?limit=${limit}&lang=en&q=${encodeURIComponent(q)}`;
+  if(near) url+=`&lat=${near.lat.toFixed(4)}&lon=${near.lon.toFixed(4)}`;
+  const ctl=new AbortController(), timer=setTimeout(()=>ctl.abort(),6000);
+  try{
+    const r=await fetch(url,{signal:ctl.signal}); if(!r.ok) throw new Error("HTTP "+r.status);
+    const j=await r.json();
+    return (j.features||[]).map(f=>{
+      const p=f.properties||{}, [lon,lat]=f.geometry.coordinates;
+      const street=p.street?((p.housenumber?p.housenumber+" ":"")+p.street):"";
+      const main=p.name&&p.name!==p.street?(street&&p.osm_key!=="place"?p.name+" · "+street:p.name):(street||p.name||q);
+      const town=p.city||p.town||p.village||p.locality||p.district||p.county||"";
+      const sub=[town!==main?town:"", p.state, p.countrycode&&p.countrycode.toUpperCase()!=="US"?p.country:""].filter(Boolean).join(", ");
+      return {lat,lon,main,sub,label:[main,sub].filter(Boolean).join(", ")};
+    });
+  } finally{ clearTimeout(timer); }
+}
+const picked={from:null,to:null};
+function setupAC(id){
+  const input=$(id), list=$(id+"-list"); let timer=null, items=[], active=-1, req=0;
+  const close=()=>{ list.hidden=true; input.setAttribute("aria-expanded","false"); active=-1; };
+  const choose=k=>{ const it=items[k]; if(!it) return; input.value=it.label; picked[id]={lat:it.lat,lon:it.lon,label:it.label}; input.classList.add("picked"); if(id==="from") hereCoords=null; close(); setStatus(""); };
+  const draw=()=>{
+    if(!items.length){ list.innerHTML='<li class="ac-note">No matches yet. Keep typing, or add the city.</li>'; }
+    else list.innerHTML=items.map((it,k)=>`<li role="option" id="${id}-opt-${k}" aria-selected="${k===active}" data-k="${k}"><b>${esc(it.main)}</b>${it.sub?`<span>${esc(it.sub)}</span>`:""}</li>`).join("");
+    list.hidden=false; input.setAttribute("aria-expanded","true");
+  };
+  input.addEventListener("input",()=>{
+    picked[id]=null; input.classList.remove("picked"); clearTimeout(timer);
+    const q=input.value.trim(); if(q.length<3||q==="My location"){ close(); return; }
+    timer=setTimeout(async()=>{
+      const my=++req, other=picked[id==="from"?"to":"from"]||(id==="to"&&hereCoords)||null;
+      try{ const res=await photon(q,other,6); if(my!==req) return; items=res; active=-1; draw(); }catch(e){ if(my===req) close(); }
+    },300);
+  });
+  input.addEventListener("keydown",e=>{
+    if(list.hidden||!items.length) return;
+    if(e.key==="ArrowDown"){ e.preventDefault(); active=(active+1)%items.length; draw(); }
+    else if(e.key==="ArrowUp"){ e.preventDefault(); active=(active-1+items.length)%items.length; draw(); }
+    else if(e.key==="Enter"){ e.preventDefault(); e.stopImmediatePropagation(); choose(active<0?0:active); }
+    else if(e.key==="Escape"){ close(); }
+  });
+  list.addEventListener("pointerdown",e=>{ const li=e.target.closest("li[data-k]"); if(!li) return; e.preventDefault(); choose(+li.dataset.k); });
+  input.addEventListener("blur",()=>setTimeout(close,150));
 }
 function pickPair(A,B){
   let best=null;
@@ -930,6 +986,7 @@ $("from").addEventListener("input",()=>{ if($("from").value!=="My location") her
 
 // Some hosts run the page in a frame that blocks form submits, so the button drives the search directly.
 $("tripForm").addEventListener("submit", e=>{ e.preventDefault(); findTrip(); });
+setupAC("from"); setupAC("to");
 ["from","to"].forEach(id=>$(id).addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); findTrip(); } }));
 ["from","to"].forEach(id=>$(id).addEventListener("input",()=>setStatus("")));
 $("goBtn").addEventListener("click", ()=>findTrip());
@@ -943,9 +1000,9 @@ async function findTrip(){
     try{ localStorage.setItem("raingap", JSON.stringify({from:fromQ,to:toQ,...prefs()})); }catch(_){}
     setStatus("Finding places…");
     const step=async(name,fn)=>{ try{ return await fn(); }catch(e){ const err=new Error(name+": "+(e&&e.message||"failed")); err.svc=true; err.plain=!!(e&&e.plainMsg); err.orig=e; throw err; } };
-    const A = hereCoords && fromQ==="My location" ? [{...hereCoords,label:"My location"}] : await step("place search", ()=>geocodeAll(fromQ));
-    await sleep(1100); // be polite to the free geocoder
-    const B = await step("place search", ()=>geocodeAll(toQ));
+    const A = hereCoords && fromQ==="My location" ? [{...hereCoords,label:"My location"}] : picked.from ? [picked.from] : await step("place search", ()=>geocodeAll(fromQ));
+    if(!picked.to) await sleep(1100); // be polite to the free geocoder
+    const B = picked.to ? [picked.to] : await step("place search", ()=>geocodeAll(toQ));
     const {a,b}=pickPair(A,B);
     setStatus(`${a.label} → ${b.label}`);
     setStatus("Getting the route…");
