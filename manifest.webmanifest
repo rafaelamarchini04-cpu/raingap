@@ -1,0 +1,15 @@
+{
+  "name": "Rain Gap",
+  "short_name": "Rain Gap",
+  "description": "Finds when to leave, and where to pull over, so the storms pass you by.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#1c2452",
+  "theme_color": "#1c2452",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

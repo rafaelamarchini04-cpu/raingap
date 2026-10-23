@@ -1,0 +1,999 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Rain Gap</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="theme-color" content="#8fa3ff">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Rain Gap">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+/* Layout: one narrow column of soft rounded cards under a little rainy-road scene; pastel radar colors. */
+:root{
+  --bg:#f2f6ff; --bg2:#fff4f8; --surface:#ffffff; --fg:#2a2f4f; --muted:#6c7396; --line:#e2e8f7; --accent:#6f86ff; --accent-ink:#ffffff; --accent-soft:#e8ecff;
+  --dry:#edf1fb; --r1:#8fdcae; --r2:#ffd166; --r3:#ff9b6a; --r4:#ff5d84;
+  --starfield:radial-gradient(circle at 20% 30%, #b8c4ff88 0 1px, transparent 1.6px), radial-gradient(circle at 70% 80%, #ffc7dc99 0 1px, transparent 1.6px);
+  --cloud:#cfd8f3; --sun:#ffcf4d; --car:#ff7aa2; --shadow:0 6px 20px rgba(80,100,180,.10);
+  --display:"Fredoka", "Avenir Next Rounded", "Arial Rounded MT Bold", system-ui, sans-serif;
+  --body:"Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#161a2e; --bg2:#1d1830; --surface:#21253f; --fg:#eef0ff; --muted:#a4aacc; --line:#30365a; --accent:#9fb0ff; --accent-ink:#161a2e; --accent-soft:#2b3260;
+  --dry:#353c66; --cloud:#5b6491; --starfield:radial-gradient(circle at 12% 18%, #ffffffcc 0 1px, transparent 1.6px), radial-gradient(circle at 63% 42%, #fff3b0cc 0 1.2px, transparent 1.8px), radial-gradient(circle at 38% 77%, #ffffff99 0 1px, transparent 1.5px), radial-gradient(circle at 86% 9%, #ffffffaa 0 .8px, transparent 1.3px), radial-gradient(circle at 90% 66%, #c9d3ff99 0 1px, transparent 1.5px); --car:#ff8fb1; --shadow:0 6px 20px rgba(0,0,0,.35); color-scheme:dark }}
+:root[data-theme="dark"]{
+  --bg:#161a2e; --bg2:#1d1830; --surface:#21253f; --fg:#eef0ff; --muted:#a4aacc; --line:#30365a; --accent:#9fb0ff; --accent-ink:#161a2e; --accent-soft:#2b3260;
+  --dry:#353c66; --cloud:#5b6491; --starfield:radial-gradient(circle at 12% 18%, #ffffffcc 0 1px, transparent 1.6px), radial-gradient(circle at 63% 42%, #fff3b0cc 0 1.2px, transparent 1.8px), radial-gradient(circle at 38% 77%, #ffffff99 0 1px, transparent 1.5px), radial-gradient(circle at 86% 9%, #ffffffaa 0 .8px, transparent 1.3px), radial-gradient(circle at 90% 66%, #c9d3ff99 0 1px, transparent 1.5px); --car:#ff8fb1; --shadow:0 6px 20px rgba(0,0,0,.35); color-scheme:dark }
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+*{box-sizing:border-box}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;background-image:var(--starfield);background-size:260px 260px}
+.wrap{position:relative;z-index:1}
+.verse{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px;padding:22px 18px;border-radius:24px;background:var(--accent-soft);cursor:pointer;border:0;color:inherit;font:inherit;width:100%}
+.verse .star{color:var(--sun);font-size:1.3rem;line-height:1}
+.verse p{margin:0;font:500 1.08rem/1.45 var(--display);max-width:38ch;text-wrap:balance}
+.verse cite{font:800 .8rem var(--body);font-style:normal;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.verse .hint{font-size:.75rem;color:var(--muted)}
+.madeby{text-align:center;color:var(--muted);font-size:.88rem;margin:0}
+.madeby b{color:var(--fg)}
+[hidden]{display:none!important}
+html,body{margin:0}
+body{background:linear-gradient(180deg,var(--bg) 0,var(--bg2) 100%) fixed,var(--bg);color:var(--fg);font:16px/1.5 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 48px}
+.wrap{max-width:640px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header{display:flex;flex-direction:column;gap:6px}
+.scene{width:100%;max-width:100%;height:auto;display:block;margin-bottom:4px}
+.scene .drop{animation:fall 1.1s linear infinite}
+.scene .tw{animation:twinkle 2.4s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.scene .moon{display:none}
+.scene.night .moon{display:inline}
+.scene.night .sun{display:none}
+@keyframes twinkle{0%,100%{opacity:.25;transform:scale(.7)}50%{opacity:1;transform:scale(1)}}
+.scene .drop:nth-child(2){animation-delay:.35s}.scene .drop:nth-child(3){animation-delay:.7s}.scene .drop:nth-child(4){animation-delay:.2s}.scene .drop:nth-child(5){animation-delay:.55s}
+.scene .car{animation:bob 1.6s ease-in-out infinite;transform-origin:center}
+.scene .sunrays{animation:spin 12s linear infinite;transform-origin:268px 34px}
+@keyframes fall{0%{transform:translateY(-6px);opacity:0}20%{opacity:1}100%{transform:translateY(26px);opacity:0}}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+h1{font:700 2.4rem/1 var(--display);letter-spacing:-.01em;margin:0;text-wrap:balance}
+h1 span{color:var(--accent)}
+.sub{color:var(--muted);margin:0;max-width:52ch}
+h2{font:600 1.25rem/1.2 var(--display);margin:0;text-wrap:balance}
+.label{font:800 .74rem/1 var(--body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+form{background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.row{display:flex;gap:8px}
+input,select{font:inherit;color:var(--fg);background:var(--dry);border:2px solid transparent;border-radius:16px;padding:12px 14px;width:100%;min-width:0}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+button{font:800 1rem var(--body);border-radius:999px;border:2px solid var(--line);background:var(--surface);transition:transform .12s ease;color:var(--fg);padding:10px 12px;cursor:pointer;white-space:nowrap}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);padding:15px 18px;font:600 1.1rem var(--display);box-shadow:0 6px 0 color-mix(in srgb,var(--accent) 70%,#000 30%)}
+button:active{transform:translateY(2px)}
+button.primary:active{box-shadow:0 3px 0 color-mix(in srgb,var(--accent) 70%,#000 30%)}
+button:disabled{opacity:.6;cursor:progress}
+.status{font-size:.92rem;color:var(--muted);min-height:1.4em;margin:0}
+.status.err{color:var(--r4)}
+
+.verdict{background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:24px;padding:18px 16px;display:flex;flex-direction:column;gap:14px}
+.demo-tag{align-self:flex-start;font:800 .76rem var(--body);padding:5px 10px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
+.steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.steps li{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:baseline}
+.steps time{white-space:nowrap;font:600 1rem var(--mono);font-variant-numeric:tabular-nums;color:var(--accent)}
+.steps b{font-weight:700}
+.steps a{color:var(--accent)}
+.compare{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{border-top:1px solid var(--line);padding-top:10px;display:flex;flex-direction:column;gap:2px}
+.stat strong{font:600 1.25rem var(--display)}
+.stat span{color:var(--muted);font-size:.88rem}
+.links{display:flex;flex-wrap:wrap;gap:8px}
+.links a{font-weight:800;color:var(--accent);text-decoration:none;background:var(--accent-soft);border-radius:999px;padding:10px 16px}
+
+section.card{background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+#strips{display:flex;flex-direction:column;gap:14px}
+.strip-row{display:flex;flex-direction:column;gap:8px}
+.strip-head{display:flex;justify-content:space-between;gap:8px;font-size:.9rem}
+.strip-head span:last-child{color:var(--muted);font-family:var(--mono);font-size:.82rem}
+.strip{position:relative;display:flex;height:26px;border-radius:999px;overflow:hidden;gap:2px;background:var(--surface)}
+.strip i{flex:1;display:block}
+.strip .cup{position:absolute;top:50%;transform:translate(-50%,-50%);font:800 .72rem var(--body);white-space:nowrap;background:var(--fg);color:var(--surface);border-radius:999px;padding:4px 8px;line-height:1}
+.ends{display:flex;justify-content:space-between;color:var(--muted);font-size:.82rem}
+
+.heat-scroll{overflow-x:auto}
+.heat{display:grid;gap:2px;font:400 .72rem var(--mono);font-variant-numeric:tabular-nums;min-width:300px}
+.heat .t{color:var(--muted);padding-right:6px;text-align:right;line-height:14px;white-space:nowrap}
+.heat .c{height:14px;border-radius:5px}
+.heat .t.best{color:var(--accent);font-weight:600}
+.heat .c.best{outline:2px solid var(--fg);outline-offset:-1px}
+.legend{display:flex;flex-wrap:wrap;gap:10px 14px;font-size:.82rem;color:var(--muted)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{width:14px;height:14px;border-radius:3px;display:inline-block}
+.prefs{display:flex;flex-direction:column;gap:6px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:var(--dry);border-radius:999px;padding:5px}
+.seg4{grid-template-columns:repeat(4,1fr)}
+.seg label{text-align:center;padding:9px 4px;font-size:.9rem;font-weight:700;cursor:pointer;border-radius:999px;display:flex;align-items:center;justify-content:center;line-height:1.2}
+.seg input{position:absolute;opacity:0;width:1px;height:1px}
+.seg label:has(input:checked){background:var(--accent);color:var(--accent-ink);font-weight:700}
+.seg label:has(input:focus-visible){outline:2px solid var(--accent);outline-offset:-3px}
+#map{height:320px;border-radius:18px;border:1px solid var(--line);background:var(--dry);z-index:0}
+.leaflet-container{font:inherit}
+.pin{font-size:20px;line-height:1;filter:drop-shadow(0 1px 2px rgba(0,0,0,.4))}
+.pin.cafe{font-size:15px}
+.end-dot{width:14px;height:14px;border-radius:50%;background:var(--fg);border:3px solid var(--surface)}
+.cafes{list-style:none;margin:0;padding:0;display:flex;flex-direction:column}
+.cafes li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}
+.cafes li:first-child{border-top:0}
+.cafes .nm{min-width:0;display:flex;flex-direction:column}
+.cafes .nm b{overflow-wrap:anywhere}
+.cafes .nm span{color:var(--muted);font-size:.86rem}
+.cafes a{flex:none;font-weight:800;color:var(--accent-ink);background:var(--accent);text-decoration:none;border-radius:999px;padding:8px 12px;font-size:.9rem}
+.stretches{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px}
+.stretches li{display:flex;flex-direction:column;gap:8px;padding:14px 14px 14px 18px;border-radius:18px;background:var(--dry);position:relative;overflow:hidden}
+.stretches li::before{content:"";position:absolute;left:0;top:0;bottom:0;width:7px;background:var(--sev,var(--line))}
+.stretches .when{font:600 .95rem var(--mono);font-variant-numeric:tabular-nums}
+.stretches p{margin:0}
+.stretches button{align-self:flex-start;background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-size:.92rem}
+.stretches .msg{color:var(--muted);font-size:.9rem}
+.cafes .grp{font:600 1rem var(--display);color:var(--accent);padding:14px 0 4px;border-top:0}
+button.soft{align-self:flex-start;background:var(--accent-soft);color:var(--accent);border-color:transparent}
+.switch{display:flex;align-items:center;gap:12px;cursor:pointer;font-weight:700}
+.switch input{position:absolute;opacity:0;width:1px;height:1px}
+.switch .knob{flex:none;width:48px;height:28px;border-radius:999px;background:var(--dry);position:relative;transition:background .15s}
+.switch .knob::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}
+.switch input:checked+.knob{background:var(--accent)}
+.switch input:checked+.knob::after{transform:translateX(20px)}
+.switch input:focus-visible+.knob{outline:2px solid var(--accent);outline-offset:2px}
+.trip-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:12px 12px 12px 18px;box-shadow:var(--shadow)}
+.trip-bar-text{display:flex;flex-direction:column;min-width:0}
+.trip-bar-text b{font:600 1.05rem var(--display);overflow-wrap:anywhere}
+.trip-bar-text span{color:var(--muted);font-size:.86rem}
+.actions{display:flex;flex-wrap:wrap;gap:8px}
+.actions button,.actions a{font:800 .95rem var(--body);border-radius:999px;padding:11px 16px;text-decoration:none;border:2px solid transparent;cursor:pointer}
+.actions .go{background:var(--accent);color:var(--accent-ink)}
+.actions .soft2{background:var(--accent-soft);color:var(--accent)}
+.fresh{margin:0;font-size:.88rem;color:var(--muted)}
+.fresh.old{color:var(--r3);font-weight:700}
+.warn{margin:0;padding:10px 14px;border-radius:16px;background:color-mix(in srgb,var(--r2) 22%,transparent);font-size:.92rem}
+.drive{background:var(--fg);color:var(--surface);border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:8px;box-shadow:var(--shadow)}
+.drive h2{color:var(--surface)}
+.drive p{margin:0}
+.drive .note{color:color-mix(in srgb,var(--surface) 70%,transparent)}
+.drive-top{display:flex;align-items:center;gap:8px}
+.drive-top .label{color:color-mix(in srgb,var(--surface) 75%,transparent);flex:1}
+.drive-dot{width:10px;height:10px;border-radius:50%;background:var(--r1);animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+.drive.alert{background:var(--r4)}
+.drive.alert h2,.drive.alert p{color:#fff}
+.drive .link{background:none;border:0;padding:0;color:inherit;text-decoration:underline;font-weight:800;font-size:.9rem}
+.drive .soft{background:color-mix(in srgb,var(--surface) 18%,transparent);color:var(--surface);border-color:transparent;align-self:flex-start}
+details.more{display:flex;flex-direction:column}
+details.more>summary{list-style:none;cursor:pointer;background:var(--surface);border:1px solid var(--line);border-radius:24px;padding:14px 18px;font:600 1.1rem var(--display);display:flex;flex-direction:column;box-shadow:var(--shadow)}
+details.more>summary::-webkit-details-marker{display:none}
+details.more>summary span{font:400 .88rem var(--body);color:var(--muted)}
+details.more[open]>summary{margin-bottom:20px}
+.more-body{display:flex;flex-direction:column;gap:20px}
+.back{align-self:flex-start;background:none;border:0;padding:0;color:var(--accent);font-weight:700;text-decoration:underline;cursor:pointer}
+.heat .t{cursor:pointer}
+.heat .t:hover{color:var(--accent);text-decoration:underline}
+.note{color:var(--muted);font-size:.88rem;margin:0;max-width:60ch}
+@media (max-width:420px){ .two{grid-template-columns:1fr} h1{font-size:1.8rem} }
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <svg class="scene" viewBox="0 0 320 96" role="img" aria-label="A little car driving out from under a rain cloud toward the sun">
+      <path d="M0 84 H320" stroke="var(--line)" stroke-width="4" stroke-linecap="round" stroke-dasharray="14 12" fill="none"/>
+      <g fill="var(--accent)"><rect class="drop" x="38" y="44" width="3" height="9" rx="1.5"/><rect class="drop" x="54" y="46" width="3" height="9" rx="1.5"/><rect class="drop" x="70" y="44" width="3" height="9" rx="1.5"/><rect class="drop" x="86" y="46" width="3" height="9" rx="1.5"/><rect class="drop" x="102" y="44" width="3" height="9" rx="1.5"/></g>
+      <g fill="var(--cloud)"><circle cx="52" cy="30" r="16"/><circle cx="74" cy="22" r="20"/><circle cx="96" cy="30" r="15"/><rect x="36" y="28" width="76" height="16" rx="8"/></g>
+      <g class="sparkles" fill="var(--sun)">
+        <path class="tw" d="M150 14 l3 7 7 3 -7 3 -3 7 -3 -7 -7 -3 7 -3z"/>
+        <path class="tw" style="animation-delay:.6s" d="M200 30 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z"/>
+        <path class="tw" style="animation-delay:1.2s" d="M120 44 l2 4 4 2 -4 2 -2 4 -2 -4 -4 -2 4 -2z"/>
+        <path class="tw" style="animation-delay:.3s" d="M305 66 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z"/>
+        <path class="tw" style="animation-delay:.9s" d="M18 20 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z"/>
+      </g>
+      <g class="moon"><circle cx="268" cy="34" r="16" fill="var(--sun)"/><circle cx="276" cy="28" r="14" fill="var(--bg)"/></g>
+      <g class="sun">
+      <g class="sunrays" stroke="var(--sun)" stroke-width="3" stroke-linecap="round"><path d="M268 10v-6M268 64v-6M244 34h-6M298 34h-6M251 17l-4-4M289 55l-4-4M285 17l4-4M247 55l4-4"/></g>
+      <circle cx="268" cy="34" r="16" fill="var(--sun)"/>
+      </g>
+      <g class="car">
+        <path d="M150 70 q0-12 12-13 l10-10 q4-4 10-4 h22 q6 0 10 5 l9 9 q12 1 12 13 v4 h-85z" fill="var(--car)"/>
+        <path d="M176 49 h11 v9 h-19z M192 49 h11 q3 0 5 3 l5 6 h-21z" fill="var(--surface)" opacity=".85"/>
+        <circle cx="170" cy="76" r="8" fill="var(--fg)"/><circle cx="170" cy="76" r="3" fill="var(--surface)"/>
+        <circle cx="216" cy="76" r="8" fill="var(--fg)"/><circle cx="216" cy="76" r="3" fill="var(--surface)"/>
+        <circle cx="231" cy="64" r="2.5" fill="var(--sun)"/>
+      </g>
+    </svg>
+    <h1>Rain <span>Gap</span></h1>
+    <p class="sub">Finds when to leave, and where to pull over for coffee or a bite, so the storms pass you by.</p>
+  </header>
+
+  <form id="tripForm" autocomplete="off">
+    <div class="field">
+      <label class="label" for="from">From</label>
+      <div class="row">
+        <input id="from" name="from" placeholder="Where are you leaving from?" required>
+        <button type="button" id="hereBtn" title="Use where I am now">📍 Here</button>
+      </div>
+    </div>
+    <div class="field">
+      <label class="label" for="to">To</label>
+      <input id="to" name="to" placeholder="Where are you going?" required>
+    </div>
+    <div class="field">
+      <label class="label" for="window">When could you leave?</label>
+      <select id="window">
+        <option value="0">Right now</option>
+        <option value="1">Anytime in the next hour</option>
+        <option value="3">Anytime in the next 3 hours</option>
+        <option value="6" selected>Anytime in the next 6 hours</option>
+        <option value="12">Anytime in the next 12 hours</option>
+      </select>
+    </div>
+    <div class="prefs">
+      <span class="label" id="patLabel">How long would you wait to stay dry?</span>
+      <div class="seg" role="radiogroup" aria-labelledby="patLabel">
+        <label><input type="radio" name="patience" value="low">A little</label>
+        <label><input type="radio" name="patience" value="mid" checked>A while</label>
+        <label><input type="radio" name="patience" value="high">Whatever it takes</label>
+      </div>
+    </div>
+    <div class="prefs">
+      <span class="label" id="kindLabel">Where would you stop?</span>
+      <div class="seg seg4" role="radiogroup" aria-labelledby="kindLabel">
+        <label><input type="radio" name="kind" value="coffee" checked>Coffee</label>
+        <label><input type="radio" name="kind" value="food">Food</label>
+        <label><input type="radio" name="kind" value="any">Either</label>
+        <label><input type="radio" name="kind" value="none">No stop</label>
+      </div>
+    </div>
+    <label class="switch" for="lightOk"><input type="checkbox" id="lightOk"><span class="knob" aria-hidden="true"></span><span>I don't mind light rain</span></label>
+    <button class="primary" id="goBtn" type="button">Find my dry window</button>
+    <p class="status" id="status" aria-live="polite"></p>
+  </form>
+
+  <div class="trip-bar" id="tripBar" hidden>
+    <div class="trip-bar-text"><b id="tripBarText"></b><span id="tripBarSub"></span></div>
+    <button type="button" id="editBtn">Edit</button>
+  </div>
+
+  <section class="drive" id="drivePanel" hidden aria-live="polite">
+    <div class="drive-top"><span class="drive-dot" aria-hidden="true"></span><span class="label">Drive mode</span><button type="button" id="endDriveBtn" class="link">End drive</button></div>
+    <h2 id="driveTitle">Checking the sky ahead…</h2>
+    <p id="driveText"></p>
+    <p class="note" id="driveMeta"></p>
+    <button type="button" class="soft" id="driveCheckBtn">Check now</button>
+  </section>
+
+  <div class="verdict" id="verdict"></div>
+
+  <section class="card" id="cafeCard" hidden>
+    <h2 id="cafeTitle">At your stop</h2>
+    <ul class="cafes" id="cafes"></ul>
+  </section>
+
+  <section class="card" id="mapCard">
+    <h2>Your route</h2>
+    <div id="map" role="img" aria-label="Map of the route colored by the rain you'd hit"></div>
+    <p class="note" id="mapNote">Route colored by the rain on your plan. Tap a stop icon for its name.</p>
+  </section>
+
+  <details class="more" id="more">
+  <summary>More details ▾ <span>Where the rain is, every departure time, what you'd drive through</span></summary>
+  <div class="more-body">
+  <section class="card" id="rainCard">
+    <h2>Where the rain is</h2>
+    <div class="field">
+      <label class="label" for="depPick">If I leave at</label>
+      <select id="depPick"></select>
+    </div>
+    <ul class="stretches" id="stretches"></ul>
+  </section>
+
+  <section class="card" id="stripCard">
+    <h2>What you'd drive through</h2>
+    <div id="strips"></div>
+    <div class="legend" id="legend"></div>
+  </section>
+
+  <section class="card">
+    <h2>Every departure, no stops</h2>
+    <p class="note">Each row is a departure time; left to right is your route. Storms show up as diagonal bands. The outlined row is your plan. Tap a time to see where its rain is.</p>
+    <div class="heat-scroll"><div class="heat" id="heat"></div></div>
+  </section>
+  </div>
+  </details>
+
+  <button type="button" class="verse" id="verse" aria-label="Verse of the day, tap for another">
+    <span class="star" aria-hidden="true">✦</span>
+    <p id="verseText"></p>
+    <cite id="verseRef"></cite>
+    <span class="hint">Tap for another verse</span>
+  </button>
+
+  <p class="note">Forecast: Open-Meteo 15-minute precipitation. Routing: OSRM. Pop-up storms are hard to predict more than an hour or two ahead, so re-check right before you leave.</p>
+</div>
+
+<script>
+/* ===== ENGINE (pure) ===== */
+const RAIN_MIN = 0.3; // mm/h counted as rain
+const ENGINE_OPT={lightOk:false}; // "I don't mind light rain"
+function wetThr(){ return ENGINE_OPT.lightOk?2.5:RAIN_MIN; }
+function intensity(r){ if(!(r>=RAIN_MIN)) return 0; if(r<2.5) return 1; if(r<7.6) return 2; if(r<16) return 3; return 4; }
+const INT_WORD=["dry","light rain","moderate rain","heavy rain","downpour"];
+
+// series: [{times:[ms], rate:[mm/h]}] per route point
+function rateAt(s, t){
+  const T=s.times; if(!T.length||t<T[0]||t>T[T.length-1]) return 0;
+  let lo=0,hi=T.length-1;
+  while(hi-lo>1){const m=(lo+hi)>>1; if(T[m]<=t) lo=m; else hi=m;}
+  const a=s.rate[lo]??0,b=s.rate[hi]??0, f=T[hi]===T[lo]?0:(t-T[lo])/(T[hi]-T[lo]);
+  return a+(b-a)*f;
+}
+function weight(r){ return r<wetThr()?0: r + Math.max(0,r-4)*1.5; }
+
+// stops: [{i: route point index, p: minutes}]
+function simulateStops(m, dep, stops){
+  const at={}; for(const st of stops||[]) if(st.i>0&&st.p>0) at[st.i]=(at[st.i]||0)+st.p;
+  let t=dep, exposure=0, wet=0, peak=0; const segs=[], segT=[], done=[];
+  for(let i=0;i<m.seg.length;i++){
+    if(at[i]){ done.push({i,p:at[i],at:t}); t+=at[i]*60000; }
+    segT.push(t); const r0=rateAt(m.series[i],t), t1=t+m.seg[i]*60000, r1=rateAt(m.series[i+1],t1), avg=(r0+r1)/2;
+    exposure+=weight(avg)*m.seg[i]/60; if(avg>=wetThr()) wet+=m.seg[i]; peak=Math.max(peak,avg);
+    segs.push(avg); t=t1;
+  }
+  segT.push(t);
+  return {dep, stops:done, stopIdx:done.length?done[0].i:-1, pause:done.reduce((a,x)=>a+x.p,0), stopAt:done.length?done[0].at:null, arrive:t, exposure, wet, peak, segs, segT};
+}
+function simulate(m, dep, stopIdx, pause){ return simulateStops(m, dep, stopIdx>0&&pause>0?[{i:stopIdx,p:pause}]:[]); }
+const bare=p=>p.stops.map(x=>({i:x.i,p:x.p}));
+
+const PATIENCE={low:0.03, mid:0.01, high:0.002}; // exposure-units per minute of delay
+function plan(m, now, earliestMin, windowH, patience, allowStops=true){
+  const step=15*60000, start=now+earliestMin*60000, deps=[start];
+  let d=Math.ceil(start/step)*step; if(d-start<5*60000) d+=step;
+  for(; d<=start+windowH*3600000; d+=step) deps.push(d);
+  const cost=PATIENCE[patience]??PATIENCE.mid, pauses=[10,15,20,30,45,60,75,90];
+  const total=m.seg.reduce((a,b)=>a+b,0); let elapsed=0; const stopIdxs=[];
+  for(let i=1;i<m.seg.length;i++){ elapsed+=m.seg[i-1]; if(elapsed>=12 && total-elapsed>=8) stopIdxs.push(i); }
+  const score=p=>p.exposure + cost*((p.dep-deps[0])/60000 + p.pause) + 0.05*p.stops.length;
+  let best=null, bestNoStop=null; const rows=[];
+  for(const d of deps){
+    const base=simulate(m,d,-1,0); rows.push(base);
+    if(!bestNoStop||score(base)<score(bestNoStop)-1e-9) bestNoStop=base;
+    if(!best||score(base)<score(best)-1e-9) best=base;
+    if(base.wet===0||!allowStops) continue;
+    let bestD=base;
+    for(const i of stopIdxs) for(const p of pauses){
+      const s=simulate(m,d,i,p); if(score(s)<score(bestD)-1e-9) bestD=s;
+    }
+    // rain in more than one place: try adding a 2nd and 3rd stop
+    for(let n=0;n<2&&bestD.stops.length&&bestD.wet>0;n++){
+      let nxt=null;
+      for(const i of stopIdxs){ if(bestD.stops.some(x=>Math.abs(x.i-i)<3)) continue;
+        for(const p of pauses){ const s=simulateStops(m,d,[...bare(bestD),{i,p}]); if(score(s)<score(nxt||bestD)-0.15) nxt=s; } }
+      if(!nxt) break; bestD=nxt;
+    }
+    if(score(bestD)<score(best)-1e-9) best=bestD;
+  }
+  return {deps, rows, best, bestNoStop, first:rows[0], total};
+}
+
+// group the drive into rain stretches
+function stretches(m,p){
+  const out=[]; let cur=null;
+  for(let i=0;i<p.segs.length;i++){
+    const r=p.segs[i];
+    if(r>=wetThr()){
+      if(!cur) cur={from:i,to:i,start:p.segT[i],peak:0,min:0,heavyMin:0};
+      cur.to=i; cur.end=p.segT[i+1]; cur.peak=Math.max(cur.peak,r); cur.min+=m.seg[i]; if(r>=7.6) cur.heavyMin+=m.seg[i];
+    } else if(cur){ out.push(cur); cur=null; }
+  }
+  if(cur) out.push(cur);
+  return out;
+}
+// best stop to wait out one stretch, keeping the same departure time
+function stopBefore(m,dep,st,existing=[]){
+  const base=simulateStops(m,dep,existing); let best=null;
+  // prefer stopping shortly before the rain (within ~30 min of driving), then anywhere earlier
+  const near=[]; let ahead=0;
+  for(let i=st.from;i>=1;i--){ if(i<st.from) ahead+=m.seg[i]; if(ahead<=30) near.push(i); }
+  for(const cand of [near, Array.from({length:st.from},(_,k)=>k+1)]){
+  for(const i of cand){ if(existing.some(x=>x.i===i)) continue; for(const p of [10,15,20,30,45,60,75,90]){
+    const s=simulateStops(m,dep,[...existing,{i,p}]), sc=s.exposure+0.004*p;
+    if(s.exposure<base.exposure-0.05 && (!best||sc<best.sc)) best={...s,sc};
+  } }
+  if(best) break; }
+  return best;
+}
+
+// a break near the middle of a dry drive that keeps it dry
+function halfwayBreak(m,b,mins=20){
+  const total=m.pts[m.pts.length-1].km;
+  const cands=m.pts.map((p,i)=>({i,f:p.km/total})).filter(x=>x.i>0&&x.i<m.pts.length-1&&x.f>=.3&&x.f<=.7).sort((a,c)=>Math.abs(a.f-.5)-Math.abs(c.f-.5));
+  for(const c of cands){ const s=simulateStops(m,b.dep,[{i:c.i,p:mins}]); if(s.exposure<=b.exposure+0.05) return s; }
+  return null;
+}
+
+/* ===== DATA ===== */
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function getJSON(url){ const r=await fetch(url);
+  if(!r.ok){ let body=null; try{ body=await r.json(); }catch(_){}
+    if(body&&(body.code==="NoRoute"||body.code==="NoSegment")) throw Object.assign(new Error("There's no driving route between those two places. Add the state or country, like \"Santa Fe, NM\"."),{plainMsg:true});
+    throw new Error("HTTP "+r.status); }
+  return r.json(); }
+
+// returns several candidate places so we can pick the pair that makes sense together
+async function geocodeAll(q){
+  q=q.trim(); const ll=q.match(/^(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)$/);
+  if(ll) return [{lat:+ll[1], lon:+ll[3], label:q}];
+  let out=[];
+  try{
+    const j=await getJSON("https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&q="+encodeURIComponent(q));
+    out=j.map(r=>{ const a=r.address||{}; const town=a.city||a.town||a.village||a.hamlet||r.name||q.split(",")[0];
+      const region=a.state||a.region||a.county||""; const cc=(a.country_code||"").toUpperCase();
+      return {lat:+r.lat, lon:+r.lon, label:[town, region, cc&&cc!=="US"?a.country:""].filter(Boolean).join(", ")}; });
+  }catch(e){}
+  if(!out.length){
+    const name=q.split(",")[0].trim();
+    const j=await getJSON("https://geocoding-api.open-meteo.com/v1/search?count=6&name="+encodeURIComponent(name));
+    out=(j.results||[]).map(r=>({lat:r.latitude, lon:r.longitude, label:[r.name, r.admin1, r.country_code!=="US"?r.country:""].filter(Boolean).join(", ")}));
+  }
+  if(!out.length) throw Object.assign(new Error(`Couldn't find "${q}". Try adding the state, like "Santa Fe, NM".`),{plainMsg:true});
+  return out;
+}
+function pickPair(A,B){
+  let best=null;
+  A.forEach((a,i)=>B.forEach((b,j)=>{ const d=distKm(a,b)+ (i+j)*15; if(!best||d<best.d) best={a,b,d}; }));
+  return best;
+}
+async function route(a,b){
+  const path=`/route/v1/driving/${a.lon},${a.lat};${b.lon},${b.lat}?overview=full&geometries=geojson&annotations=duration,distance`;
+  let j=null, lastErr=null;
+  for(const host of ["https://routing.openstreetmap.de/routed-car","https://router.project-osrm.org"]){
+    try{ j=await getJSON(host+path); if(j&&j.routes&&j.routes.length) break; }catch(e){ lastErr=e; }
+  }
+  if(!j) throw lastErr||new Error("routing failed");
+  if(!j.routes||!j.routes.length) throw new Error("No driving route found between those places.");
+  const r=j.routes[0], coords=r.geometry.coordinates, dur=[], dist=[];
+  for(const leg of r.legs){ dur.push(...leg.annotation.duration); dist.push(...leg.annotation.distance); }
+  return {coords, dur, dist, totalS:r.duration, totalM:r.distance};
+}
+
+function samplePoints(rt){
+  const km=rt.totalM/1000, n=Math.max(8,Math.min(36,Math.round(km/10)))+1, target=rt.totalS/(n-1);
+  const pts=[{lat:rt.coords[0][1],lon:rt.coords[0][0],km:0,ci:0}], seg=[]; let acc=0,accD=0,last=0;
+  for(let i=0;i<rt.dur.length;i++){
+    acc+=rt.dur[i]; accD+=rt.dist[i];
+    if(acc-last>=target && pts.length<n-1){ const c=rt.coords[i+1]; pts.push({lat:c[1],lon:c[0],km:accD/1000,ci:i+1}); seg.push((acc-last)/60); last=acc; }
+  }
+  const c=rt.coords[rt.coords.length-1]; pts.push({lat:c[1],lon:c[0],km:rt.totalM/1000,ci:rt.coords.length-1}); seg.push((rt.totalS-last)/60);
+  return {pts, seg};
+}
+
+async function forecast(pts){
+  const lat=pts.map(p=>p.lat.toFixed(3)).join(","), lon=pts.map(p=>p.lon.toFixed(3)).join(",");
+  let j=await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&minutely_15=precipitation&hourly=precipitation&forecast_days=2&timeformat=unixtime`);
+  if(!Array.isArray(j)) j=[j];
+  return j.map(loc=>{
+    const m=loc.minutely_15, h=loc.hourly;
+    if(m&&m.precipitation&&m.precipitation.some(v=>v!=null)){
+      // value = mm over the preceding 15 min -> centre it and convert to mm/h
+      return {times:m.time.map(t=>t*1000-450000), rate:m.precipitation.map(v=>(v??0)*4)};
+    }
+    return {times:h.time.map(t=>t*1000-1800000), rate:h.precipitation.map(v=>v??0)};
+  });
+}
+
+async function placeName(lat,lon){
+  try{
+    const j=await getJSON(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=12&lat=${lat}&lon=${lon}`);
+    const a=j.address||{}; return a.city||a.town||a.village||a.hamlet||a.suburb||a.county||null;
+  }catch(e){ return null; }
+}
+
+/* ===== DEMO (made-up storms on Orlando → Jacksonville) ===== */
+function demoModel(now){
+  const way=[["Orlando",28.5383,-81.3792,0],["Sanford",28.80,-81.27,35],["DeLand",29.03,-81.30,62],["Daytona Beach",29.21,-81.02,95],["Ormond Beach",29.29,-81.06,104],["Palm Coast",29.58,-81.21,140],["St. Augustine",29.89,-81.31,180],["Jacksonville",30.3322,-81.6557,226]];
+  const N=20, totalKm=226, totalMin=140, pts=[], seg=[], names=[];
+  for(let k=0;k<N;k++){
+    const km=totalKm*k/(N-1); let j=0; while(j<way.length-2&&way[j+1][3]<km) j++;
+    const a=way[j],b=way[j+1],f=(km-a[3])/(b[3]-a[3]);
+    pts.push({lat:a[1]+(b[1]-a[1])*f, lon:a[2]+(b[2]-a[2])*f, km, ci:k});
+    names.push(Math.abs(km-a[3])<Math.abs(km-b[3])?a[0]:b[0]);
+    if(k) seg.push(totalMin/(N-1));
+  }
+  const g=(x,c,w)=>Math.exp(-(((x-c)/w)**2));
+  const field=(km,tm)=> 8*g(km,10,22)*g(tm,-5,18)        // storm parked over Orlando, clearing
+                       + 11*g(km,100,14)*g(tm,86,10)        // cell over Daytona/Ormond
+                       + 9*g(km,225,30)*Math.min(1,Math.max(0,(tm-196)/20)); // evening rain into Jacksonville
+  const series=pts.map(p=>{ const times=[],rate=[]; for(let tm=-60; tm<=16*60; tm+=15){ times.push(now+tm*60000); rate.push(Math.max(0,field(p.km,tm)-0.4)); } return {times,rate}; });
+  return {pts, seg, series, names, line:pts.map(p=>[p.lat,p.lon]), from:"Orlando, FL", to:"Jacksonville, FL", demo:true};
+}
+
+/* ===== UI ===== */
+const $=id=>document.getElementById(id);
+const COLORS=["var(--dry)","var(--r1)","var(--r2)","var(--r3)","var(--r4)"];
+const fmt=t=>new Date(t).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
+const mins=m=>m<60?`${Math.round(m)} min`:`${Math.floor(m/60)} h ${String(Math.round(m%60)).padStart(2,"0")} min`;
+const mi=km=>Math.round(km*0.621);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function setStatus(t,err){ const s=$("status"); s.textContent=t||""; s.classList.toggle("err",!!err); }
+function wetText(p){ return p.wet<1?(p.peak>=RAIN_MIN?"Only light rain":"Dry the whole way"): `${mins(p.wet)} of ${INT_WORD[intensity(p.peak)]}`; }
+const ago=t=>{ const mnt=Math.round((Date.now()-t)/60000); return mnt<1?"just now":mnt<60?`${mnt} min ago`:`${Math.floor(mnt/60)} h ${mnt%60} min ago`; };
+
+function strip(p, m, title){
+  const cells=p.segs.map(r=>`<i style="background:${COLORS[intensity(r)]}"></i>`).join("");
+  let cup="";
+  for(const st of p.stops||[]){ const pct=100*m.pts[st.i].km/m.pts[m.pts.length-1].km; cup+=`<b class="cup" style="left:${Math.min(92,Math.max(8,pct)).toFixed(1)}%">${(KIND[stopKind()]||KIND.coffee).icon} ${st.p}m</b>`; }
+  return `<div class="strip-row"><div class="strip-head"><span>${esc(title)}</span><span>${fmt(p.dep)} → ${fmt(p.arrive)}</span></div><div class="strip" role="img" aria-label="${esc(title)}: ${esc(wetText(p))}">${cells}${cup}</div></div>`;
+}
+
+let customStops=[];
+let curPlan=null, curModel=null;
+async function render(m, res, b=res.best, custom=false, opts={}){
+  curPlan=b; curModel=m;
+  const base=res.first, totalKm=m.pts[m.pts.length-1].km, stops=b.stops||[];
+  if(!custom) customStops=[];
+  const names=[];
+  for(const st of stops) names.push(m.demo ? m.names[st.i] : await nameFor(m, st.i));
+  const steps=[m.driving
+    ? `<li><time>${fmt(b.dep)}</time><div><b>You're on the road</b> (${esc(m.how)})</div></li>`
+    : `<li><time>${fmt(b.dep)}</time><div><b>Leave ${esc(m.from)}</b>${b.dep>res.first.dep+60000?` (wait ${mins((b.dep-res.first.dep)/60000)})`:" (now)"}</div></li>`];
+  stops.forEach((st,k)=>{
+    const sp=m.pts[st.i], label=stops.length>1?`Stop ${k+1}`:(custom==="break"?"Take a break":"Stop");
+    steps.push(`<li><time>${fmt(st.at)}</time><div><b>${label} ${names[k]?"in "+esc(names[k]):"here"}</b> for about ${st.p} min, mile ${mi(sp.km)}.${k===stops.length-1?" "+KIND[stopKind()].listed:""}</div></li>`);
+  });
+  steps.push(`<li><time>${fmt(b.arrive)}</time><div><b>Arrive in ${esc(m.to)}</b></div></li>`);
+  const saved = base.wet - b.wet;
+  const verdictTitle = m.driving ? (stops.length ? "☕ A stop is coming up" : b.wet<1 ? "☀️ Dry the rest of the way" : "🌧️ Rain ahead, a stop won't help") : custom==="break" ? "☀️ Dry, with a break halfway" : custom ? (b.wet<1?(stops.length>1?"☀️ Your stops keep you dry!":"☀️ Your stop keeps you dry!"):(stops.length>1?"☂️ Your plan with the stops":"☂️ Your plan with the stop")) : b.wet<1 ? (base.wet<1 ? "☀️ Go now, it's dry the whole way!" : "☀️ You can make it dry!") : (saved>0 ? "☂️ This is the driest option" : "🌧️ No dry window in this range");
+  let maps="";
+  if(!m.demo){
+    const o=m.pts[0], d=m.pts[m.pts.length-1];
+    maps=`https://www.google.com/maps/dir/?api=1&origin=${o.lat},${o.lon}&destination=${d.lat},${d.lon}`+(stops.length?"&waypoints="+stops.map(st=>`${m.pts[st.i].lat.toFixed(5)},${m.pts[st.i].lon.toFixed(5)}`).join("%7C"):"")+"&travelmode=driving";
+  }
+  $("verdict").innerHTML = `${m.demo?'<span class="demo-tag">Example with made-up storms · enter your trip above</span>':""}
+    <h2>${verdictTitle}</h2>
+    <ol class="steps">${steps.join("")}</ol>
+    <div class="compare">
+      <div class="stat"><span>This plan</span><strong>${esc(wetText(b))}</strong></div>
+      <div class="stat"><span>Leaving at ${fmt(base.dep)}</span><strong>${esc(wetText(base))}</strong></div>
+    </div>
+    ${b.dep-Date.now()>2*3600000?`<p class="warn">⏳ That's ${mins((b.dep-Date.now())/60000)} from now. Storms are hard to predict this far ahead, so tap Re-check before you go.</p>`:""}
+    <p class="fresh" id="fresh" data-t="${m.fetchedAt||Date.now()}"></p>
+    <div class="actions">
+      <button type="button" class="soft2" id="recheckBtn">↻ Re-check</button>
+      ${m.demo?"":(drive.on?"":'<button type="button" class="go" id="driveBtn">🚗 Start drive</button>')}
+      ${maps?`<a class="soft2" href="${maps}" target="_blank" rel="noopener">Open in Google Maps</a>`:""}
+    </div>
+    ${!stops.length&&stopKind()!=="none"&&!m.driving?'<button type="button" class="soft" id="breakBtn">☕ Add a break halfway</button>':""}
+    ${custom?'<button type="button" class="back" id="backBtn">Back to Rain Gap\'s pick</button>':""}
+`;
+  tickFresh();
+  $("recheckBtn").onclick=recheck;
+  const db=$("driveBtn"); if(db) db.onclick=startDrive;
+
+  let html=strip(b,m,custom?"Your plan":"Rain Gap plan");
+  const same=(x,y)=>x.dep===y.dep&&JSON.stringify(bare(x))===JSON.stringify(bare(y));
+  const nb=res.bestNoStop;
+  if(!same(nb,b)) html+=strip(nb,m,"Best with no stop");
+  if(!same(base,b)&&!same(base,nb)) html+=strip(base,m,`Leave at ${fmt(base.dep)}`);
+  html+=`<div class="ends"><span>${esc(m.from)}</span><span>${mi(totalKm)} mi</span><span>${esc(m.to)}</span></div>`;
+  $("strips").innerHTML=html;
+
+  const cols=res.rows[0].segs.length, heat=$("heat");
+  heat.style.gridTemplateColumns=`auto repeat(${cols},1fr)`;
+  let h=""; const bestDep=res.bestNoStop.dep;
+  for(const r of res.rows){
+    const isB=r.dep===b.dep;
+    h+=`<span class="t${isB?" best":""}" title="See rain if I leave at ${fmt(r.dep)}">${fmt(r.dep)}</span>`+r.segs.map(x=>`<i class="c${isB?" best":""}" style="background:${COLORS[intensity(x)]}"></i>`).join("");
+  }
+  heat.innerHTML=h;
+  heat.querySelectorAll(".t").forEach((el,k)=>{ el.dataset.dep=res.rows[k].dep; el.setAttribute("role","button"); el.tabIndex=0; });
+  const bb=$("backBtn"); if(bb) bb.onclick=()=>{ render(m,res); };
+  const brk=$("breakBtn"); if(brk) brk.onclick=async()=>{
+    const s=halfwayBreak(m,b);
+    if(!s){ brk.outerHTML='<span class="msg">A break near halfway would put you in rain. Keep driving!</span>'; return; }
+    await render(m,res,s,"break"); $("verdict").scrollIntoView({behavior:"smooth",block:"start"});
+  };
+  if(!custom) fillDepPick(m,res);
+  drawMap(m,b);
+  loadCafes(m,b,res,custom,opts);
+}
+
+/* ===== RAIN STRETCHES ===== */
+let curRes=null; const nameCache={};
+async function nameFor(m,i){
+  if(m.demo) return m.names[i];
+  const k=m.pts[i].lat.toFixed(3)+","+m.pts[i].lon.toFixed(3);
+  if(!(k in nameCache)){ nameCache[k]=await placeName(m.pts[i].lat,m.pts[i].lon); await sleep(1100); }
+  return nameCache[k];
+}
+function fillDepPick(m,res){
+  curRes=res; const sel=$("depPick");
+  sel.innerHTML=res.rows.map((r,k)=>`<option value="${r.dep}">${fmt(r.dep)}${k===0?" (earliest)":""} · ${r.wet<1?"dry":mins(r.wet)+" of rain"}</option>`).join("");
+  sel.value=String(res.rows[0].dep); customStops=[]; showStretches(m,res,res.rows[0].dep);
+}
+let strReq=0;
+async function showStretches(m,res,dep){
+  const my=++strReq, p=simulateStops(m,+dep,customStops), list=$("stretches"), sts=stretches(m,p);
+  const withStops=customStops.length?` with your ${customStops.length>1?customStops.length+" stops":"stop"}`:"";
+  if(!sts.length){ list.innerHTML=`<li style="--sev:var(--r1)"><p>Dry the whole way if you leave at ${fmt(p.dep)}${withStops}. Arrive about ${fmt(p.arrive)}.</p></li>`; return; }
+  const sevVar=["var(--line)","var(--r1)","var(--r2)","var(--r3)","var(--r4)"];
+  const item=(st,k,nm)=>{
+    const a=Math.round(m.pts[st.from].km*0.621), z=Math.round(m.pts[st.to+1].km*0.621);
+    const heavy=st.heavyMin?` (${mins(st.heavyMin)} of it heavy)`:"";
+    return `<li style="--sev:${sevVar[intensity(st.peak)]}" data-k="${k}">
+      <span class="when">${fmt(st.start)} – ${fmt(st.end)}</span>
+      <p><b>${mins(st.min)} of ${INT_WORD[intensity(st.peak)]}</b>${heavy}, ${nm?"near "+esc(nm)+", ":""}miles ${a}–${z}.</p>
+      ${stopKind()==="none"?`<span class="msg">Pick Coffee, Food or Either above to plan a stop for this.</span>`:st.from>0?`<button type="button" data-k="${k}">${customStops.length?"Add another stop for this":"Plan a stop to wait it out"}</button>`:`<span class="msg">This starts right where you leave. Waiting at home is your stop: try a later departure.</span>`}
+      <span class="msg" hidden></span></li>`;
+  };
+  list.innerHTML=sts.map((st,k)=>item(st,k,null)).join("");
+  for(let k=0;k<sts.length;k++){
+    const nm=await nameFor(m, Math.round((sts[k].from+sts[k].to+1)/2)); if(my!==strReq) return;
+    const li=list.querySelector(`li[data-k="${k}"]`); if(li&&nm){ const tmp=document.createElement("ul"); tmp.innerHTML=item(sts[k],k,nm); li.replaceWith(tmp.firstElementChild); }
+  }
+}
+$("depPick").addEventListener("change",e=>{ customStops=[]; if(lastModel&&curRes) showStretches(lastModel,curRes,+e.target.value); });
+$("heat").addEventListener("click",e=>{ const t=e.target.closest(".t"); if(!t||!curRes) return; customStops=[]; $("depPick").value=t.dataset.dep; showStretches(lastModel,curRes,+t.dataset.dep); $("rainCard").scrollIntoView({behavior:"smooth",block:"start"}); });
+$("heat").addEventListener("keydown",e=>{ if((e.key==="Enter"||e.key===" ")&&e.target.classList.contains("t")){ e.preventDefault(); e.target.click(); } });
+$("stretches").addEventListener("click",async e=>{
+  const btn=e.target.closest("button[data-k]"); if(!btn||!lastModel) return;
+  const m=lastModel, dep=+$("depPick").value, p=simulateStops(m,dep,customStops), st=stretches(m,p)[+btn.dataset.k];
+  const msg=btn.parentElement.querySelector(".msg[hidden]")||btn.nextElementSibling;
+  const fix=st&&stopBefore(m,dep,st,customStops);
+  if(!fix){ msg.hidden=false; msg.textContent="A stop doesn't help here. This rain sits over the road too long. Try a different departure time."; return; }
+  customStops=bare(fix);
+  await render(m,curRes,fix,true);
+  await showStretches(m,curRes,dep);
+  $("verdict").scrollIntoView({behavior:"smooth",block:"start"});
+});
+
+/* ===== FRESHNESS & RE-CHECK ===== */
+function tickFresh(){
+  const el=$("fresh"); if(!el) return; const t=+el.dataset.t, old=Date.now()-t>30*60000;
+  el.textContent=(lastModel&&lastModel.demo)?"Example forecast":`Forecast updated ${ago(t)}${old?". It's getting old, tap Re-check.":""}`;
+  el.classList.toggle("old",old&&!(lastModel&&lastModel.demo));
+}
+setInterval(tickFresh,30000);
+async function recheck(){
+  const btn=$("recheckBtn"); if(btn){ btn.disabled=true; btn.textContent="Checking…"; }
+  try{
+    if(!lastModel||lastModel.demo){ await runDemo(); return; }
+    if(drive.on){ await driveCheck(); return; }
+    lastModel.series=await forecast(lastModel.pts); lastModel.fetchedAt=Date.now();
+    const p=prefs(); await render(lastModel, plan(lastModel, Date.now(), p.earliest, p.windowH, p.patience, p.stops));
+  }catch(e){ const f=$("fresh"); if(f){ f.textContent="Couldn't re-check. Check your signal and try again."; f.classList.add("old"); } }
+  finally{ const b2=$("recheckBtn"); if(b2){ b2.disabled=false; b2.textContent="↻ Re-check"; } }
+}
+function collapseForm(label){
+  $("tripForm").hidden=true; $("tripBar").hidden=false; $("tripBarText").textContent=label;
+  const win=$("window").selectedOptions[0].textContent.replace("Anytime in the","Leave in the");
+  $("tripBarSub").textContent=[win, KIND[stopKind()]&&stopKind()!=="none"?"stops for "+(stopKind()==="any"?"coffee or food":stopKind()):"no stops", ENGINE_OPT.lightOk?"light rain OK":""].filter(Boolean).join(" · ");
+}
+$("editBtn").addEventListener("click",()=>{ $("tripForm").hidden=false; $("tripBar").hidden=true; $("from").focus(); });
+$("lightOk").addEventListener("change",async e=>{
+  ENGINE_OPT.lightOk=e.target.checked; try{ localStorage.setItem("raingap-light", e.target.checked?"1":"0"); }catch(_){}
+  if(!lastModel) return; const p=prefs();
+  if(lastModel.demo) await runDemo(); else await render(lastModel, plan(lastModel, Date.now(), p.earliest, p.windowH, p.patience, p.stops));
+});
+try{ if(localStorage.getItem("raingap-light")==="1"){ $("lightOk").checked=true; ENGINE_OPT.lightOk=true; } }catch(_){}
+
+/* ===== DRIVE MODE ===== */
+// Re-checks every 10 minutes while this page stays open. Uses GPS when the page is allowed to,
+// otherwise estimates where you are from when you started and the plan's timing.
+const drive={on:false};
+function beep(){
+  try{ const ac=drive.ac; if(!ac) return; const t=ac.currentTime;
+    [0,0.25].forEach((d,k)=>{ const o=ac.createOscillator(), g=ac.createGain(); o.frequency.value=k?880:660; o.connect(g); g.connect(ac.destination);
+      g.gain.setValueAtTime(0.0001,t+d); g.gain.exponentialRampToValueAtTime(0.4,t+d+0.02); g.gain.exponentialRampToValueAtTime(0.0001,t+d+0.22); o.start(t+d); o.stop(t+d+0.25); });
+  }catch(_){}
+  try{ navigator.vibrate&&navigator.vibrate([200,100,200]); }catch(_){}
+}
+async function keepAwake(){ try{ if(navigator.wakeLock&&document.visibilityState==="visible") drive.lock=await navigator.wakeLock.request("screen"); }catch(_){} }
+async function startDrive(){
+  if(!curModel||curModel.demo) return;
+  drive.on=true; drive.model=curModel; drive.plan=curPlan; drive.startedAt=Date.now(); drive.lastKey=null; drive.gps=null;
+  try{ drive.ac=new (window.AudioContext||window.webkitAudioContext)(); drive.ac.resume(); }catch(_){}
+  await keepAwake();
+  if(navigator.geolocation){ try{ drive.watch=navigator.geolocation.watchPosition(pos=>{ drive.gps={lat:pos.coords.latitude,lon:pos.coords.longitude,t:Date.now()}; },()=>{},{enableHighAccuracy:true,maximumAge:30000,timeout:20000}); }catch(_){} }
+  $("drivePanel").hidden=false; $("drivePanel").scrollIntoView({behavior:"smooth",block:"start"});
+  const db=$("driveBtn"); if(db) db.remove();
+  await driveCheck();
+  drive.timer=setInterval(driveCheck,10*60000);
+}
+function endDrive(){
+  drive.on=false; clearInterval(drive.timer);
+  try{ drive.watch!=null&&navigator.geolocation.clearWatch(drive.watch); }catch(_){}
+  try{ drive.lock&&drive.lock.release(); }catch(_){}
+  $("drivePanel").hidden=true; $("drivePanel").classList.remove("alert");
+}
+$("endDriveBtn").addEventListener("click",endDrive);
+$("driveCheckBtn").addEventListener("click",()=>driveCheck());
+document.addEventListener("visibilitychange",()=>{ if(drive.on&&document.visibilityState==="visible"){ keepAwake(); if(Date.now()-(drive.lastCheck||0)>9*60000) driveCheck(); } });
+function whereNow(){
+  const m=drive.model, p=drive.plan;
+  if(drive.gps&&Date.now()-drive.gps.t<5*60000){
+    let k=0,bd=Infinity; m.pts.forEach((pt,i)=>{ const d=distKm(pt,drive.gps); if(d<bd){bd=d;k=i;} });
+    return {k, how:"from your GPS"};
+  }
+  const t=p.dep+(Date.now()-drive.startedAt); let k=0;
+  while(k<p.segT.length-2&&p.segT[k+1]<=t) k++;
+  return {k, how:"estimated from your start time"};
+}
+let driving=false;
+async function driveCheck(){
+  if(!drive.on||driving) return; driving=true; drive.lastCheck=Date.now();
+  const panel=$("drivePanel"), title=$("driveTitle"), text=$("driveText"), meta=$("driveMeta");
+  try{
+    const m=drive.model, {k,how}=whereNow();
+    if(k>=m.pts.length-2){ title.textContent="🎉 You're almost there!"; text.textContent="Nothing left to plan. Drive safe."; meta.textContent=""; panel.classList.remove("alert"); return; }
+    title.textContent="Checking the sky ahead…";
+    let series;
+    try{ series=await forecast(m.pts.slice(k)); }
+    catch(e){ title.textContent="📶 Couldn't check right now"; text.textContent="Probably no signal. It will try again in 10 minutes."; meta.textContent=""; return; }
+    const off=m.pts[k];
+    const m2={id:Math.random().toString(36).slice(2), pts:m.pts.slice(k).map(pt=>({...pt,km:pt.km-off.km,ci:pt.ci-off.ci})), seg:m.seg.slice(k), series,
+      line:m.line.slice(off.ci), names:m.names?m.names.slice(k):undefined, from:"Here", to:m.to, demo:false, driving:true, how, fetchedAt:Date.now()};
+    const pr=prefs(); const res=plan(m2, Date.now(), 0, 0, pr.patience, pr.stops); const b=res.best;
+    let key, msg, head, alertOn=false;
+    if(b.stops.length){
+      const st=b.stops[0], sp=m2.pts[st.i], name=await nameFor(m2,st.i), inMin=Math.max(1,Math.round((st.at-Date.now())/60000));
+      head=`☕ Plan a stop ${name?"in "+name:"ahead"}`;
+      msg=`In about ${inMin} min (${mi(sp.km)} mi from here), pull over for ${st.p} min. That lets the rain ahead pass.`;
+      key="stop:"+Math.round(st.at/600000); alertOn=true;
+    }else if(b.wet>=1){
+      const s1=stretches(m2,b)[0], inMin=Math.max(0,Math.round((s1.start-Date.now())/60000));
+      head=`🌧️ ${INT_WORD[intensity(s1.peak)][0].toUpperCase()+INT_WORD[intensity(s1.peak)].slice(1)} ${inMin?`in about ${inMin} min`:"right now"}`;
+      msg=`About ${mins(s1.min)} of it. A stop wouldn't help much, so slow down and leave extra space.`;
+      key="rain:"+Math.round(s1.start/600000); alertOn=true;
+    }else{
+      head="☀️ Dry ahead"; msg=b.peak>=RAIN_MIN?"Only a little light rain on the rest of the way.":"No rain on the rest of the way. Enjoy the drive!"; key="dry";
+    }
+    title.textContent=head; text.textContent=msg;
+    meta.textContent=`Checked ${fmt(Date.now())} · position ${how} · next check ${fmt(Date.now()+10*60000)} · keep this screen open`;
+    panel.classList.toggle("alert",alertOn);
+    if(alertOn&&key!==drive.lastKey) beep();
+    drive.lastKey=key;
+    drive.model=m2; drive.plan=b; drive.startedAt=Date.now();
+    lastModel=m2; await render(m2,res);
+  }finally{ driving=false; }
+}
+
+/* ===== MAP ===== */
+let map=null, layer=null;
+function cssColor(name){ return getComputedStyle(document.documentElement).getPropertyValue(name).trim()||"#888"; }
+function drawMap(m,b){
+  if(!window.L){ $("mapNote").textContent="The map needs an internet connection."; return; }
+  if(!map){
+    map=L.map("map",{zoomControl:true,attributionControl:true});
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(map);
+  }
+  if(layer) layer.remove(); layer=L.layerGroup().addTo(map);
+  const cols=[cssColor("--accent"),cssColor("--r1"),cssColor("--r2"),cssColor("--r3"),cssColor("--r4")];
+  L.polyline(m.line,{color:cssColor("--fg"),weight:9,opacity:.25}).addTo(layer);
+  for(let i=0;i<b.segs.length;i++){
+    const part=m.line.slice(m.pts[i].ci, m.pts[i+1].ci+1);
+    if(part.length>1) L.polyline(part,{color:cols[intensity(b.segs[i])],weight:6,opacity:1}).addTo(layer);
+  }
+  const dot=L.divIcon({className:"",html:'<div class="end-dot"></div>',iconSize:[14,14],iconAnchor:[7,7]});
+  L.marker([m.pts[0].lat,m.pts[0].lon],{icon:dot,title:m.from}).bindPopup("Start: "+esc(m.from)).addTo(layer);
+  const e=m.pts[m.pts.length-1]; L.marker([e.lat,e.lon],{icon:dot,title:m.to}).bindPopup("End: "+esc(m.to)).addTo(layer);
+  (b.stops||[]).forEach((st,k)=>{ const sp=m.pts[st.i];
+    L.marker([sp.lat,sp.lon],{icon:L.divIcon({className:"",html:'<div class="pin">📍</div>',iconSize:[20,20],iconAnchor:[10,20]}),title:"Stop "+(k+1)}).bindPopup(`${b.stops.length>1?"Stop "+(k+1)+": ":""}~${st.p} min`).addTo(layer); });
+  setTimeout(()=>{ map.invalidateSize(); map.fitBounds(L.latLngBounds(m.line),{padding:[24,24]}); },50);
+}
+
+/* ===== COFFEE ===== */
+const distKm=(a,b)=>{const R=6371,t=Math.PI/180,dLa=(b.lat-a.lat)*t,dLo=(b.lon-a.lon)*t,x=Math.sin(dLa/2)**2+Math.cos(a.lat*t)*Math.cos(b.lat*t)*Math.sin(dLo/2)**2;return 2*R*Math.asin(Math.sqrt(x));};
+const KIND={
+  coffee:{amen:["cafe"], wide:["cafe","fast_food"], title:"Coffee at your stop", listed:"Coffee shops are listed below.", look:"coffee shops", query:"coffee", icon:"☕"},
+  food:{amen:["restaurant","fast_food"], wide:["restaurant","fast_food","food_court"], title:"Food at your stop", listed:"Places to eat are listed below.", look:"places to eat", query:"restaurants", icon:"🍔"},
+  none:{amen:["cafe"], wide:["cafe","fast_food"], title:"Coffee at your stop", listed:"Coffee shops are listed below.", look:"coffee shops", query:"coffee", icon:"☕"},
+  any:{amen:["cafe","restaurant","fast_food"], wide:["cafe","restaurant","fast_food","food_court"], title:"Coffee & food at your stop", listed:"Coffee and food spots are listed below.", look:"coffee or food", query:"coffee or food", icon:"🍽️"}
+};
+const KIND_ICON={cafe:"☕",fast_food:"🍔",restaurant:"🍽️",food_court:"🍽️"};
+const KIND_WORD={cafe:"café",fast_food:"fast food",restaurant:"restaurant",food_court:"food court"};
+function stopKind(){ return (document.querySelector('input[name="kind"]:checked')||{}).value||"coffee"; }
+let shownModel=null, shownPlan=null;
+let prevKind=null;
+document.querySelectorAll('input[name="kind"]').forEach(el=>el.addEventListener("change",async()=>{
+  try{ localStorage.setItem("raingap-kind", stopKind()); }catch(_){}
+  const k=stopKind(), flip=(k==="none")!==(prevKind==="none"); prevKind=k;
+  if(flip&&lastModel){ const p=prefs(); if(lastModel.demo) await runDemo(); else await render(lastModel, plan(lastModel, Date.now(), p.earliest, p.windowH, p.patience, p.stops)); return; }
+  if(k!=="none"&&shownModel&&shownPlan){ loadCafes(shownModel,shownPlan);
+    const li=[...document.querySelectorAll("#verdict .steps li")].reverse().find(x=>/listed below/.test(x.textContent));
+    if(li){ const d=li.querySelector("div"); d.innerHTML=d.innerHTML.replace(/(Coffee shops|Places to eat|Coffee and food spots) are listed below\./g, KIND[stopKind()].listed); } }
+}));
+try{ const k=localStorage.getItem("raingap-kind"); const el=k&&document.querySelector(`input[name="kind"][value="${k}"]`); if(el) el.checked=true; }catch(_){}
+prevKind=stopKind();
+const gSearch=(sp,K)=>`https://www.google.com/maps/search/${encodeURIComponent(K.query)}/@${sp.lat.toFixed(4)},${sp.lon.toFixed(4)},14z`;
+let cafeReq=0;
+// Nominatim already works for city search, so ask it for nearby places first
+const NOM_Q={cafe:"cafe",restaurant:"restaurant",fast_food:"fast food"};
+async function nominatimPlaces(sp,radius,kinds){
+  const dLat=radius/111000, dLon=radius/(111000*Math.cos(sp.lat*Math.PI/180));
+  const vb=[sp.lon-dLon,sp.lat+dLat,sp.lon+dLon,sp.lat-dLat].map(v=>v.toFixed(5)).join(",");
+  const out=[]; let first=true, ok=false;
+  for(const k of kinds){
+    const term=NOM_Q[k]; if(!term) continue;
+    if(!first) await sleep(1100); first=false;
+    const ctl=new AbortController(), timer=setTimeout(()=>ctl.abort(),8000);
+    try{
+      const r=await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=15&bounded=1&viewbox=${vb}&q=${encodeURIComponent(term)}`,{signal:ctl.signal});
+      if(!r.ok) throw new Error("HTTP "+r.status);
+      const j=await r.json(); ok=true;
+      for(const x of j){ if(!x.name) continue; out.push({lat:+x.lat, lon:+x.lon, name:x.name, kind:NOM_Q[x.type]?x.type:k}); }
+    }catch(e){} finally{ clearTimeout(timer); }
+  }
+  if(!ok) throw new Error("places failed");
+  const seen=new Set();
+  return out.filter(c=>{ const key=c.name+"|"+c.lat.toFixed(4); if(seen.has(key)) return false; seen.add(key); return true; })
+    .map(c=>({...c,d:distKm(sp,c)})).sort((a,b)=>a.d-b.d);
+}
+async function findPlaces(sp,radius,kinds){
+  try{ const r=await nominatimPlaces(sp,radius,kinds); if(r.length) return r; }catch(e){}
+  return overpass(sp,radius,kinds);
+}
+async function overpass(sp,radius,kinds){
+  const q=`[out:json][timeout:8];(${kinds.map(k=>`node["amenity"="${k}"](around:${radius},${sp.lat},${sp.lon});way["amenity"="${k}"](around:${radius},${sp.lat},${sp.lon});`).join("")});out center 40;`;
+  let j=null, lastErr=null;
+  for(const host of ["https://overpass-api.de/api/interpreter","https://overpass.kumi.systems/api/interpreter","https://overpass.private.coffee/api/interpreter"]){
+    const ctl=new AbortController(), timer=setTimeout(()=>ctl.abort(),7000); // give up on a slow server after 7 s
+    try{ const r=await fetch(host+"?data="+encodeURIComponent(q),{signal:ctl.signal}); if(!r.ok) throw new Error("HTTP "+r.status); j=await r.json(); break; }catch(e){ lastErr=e; }
+    finally{ clearTimeout(timer); }
+  }
+  if(!j) throw lastErr||new Error("places failed");
+  return (j.elements||[]).map(el=>({lat:el.lat??el.center?.lat, lon:el.lon??el.center?.lon, name:el.tags?.name||el.tags?.brand, kind:el.tags?.amenity, hours:el.tags?.opening_hours}))
+    .filter(c=>c.name&&c.lat!=null).map(c=>({...c,d:distKm(sp,c)})).sort((a,b)=>a.d-b.d);
+}
+const placeCache={};
+async function placesNear(m,i,K,radius){
+  const key=`${m.id}|${i}|${stopKind()}|${radius}`;
+  if(!(key in placeCache)) placeCache[key]=await findPlaces(m.pts[i],radius,radius>3000?K.wide:K.amen);
+  return placeCache[key];
+}
+async function loadCafes(m,b,res,custom,opts={}){
+  shownModel=m; shownPlan=b; const K=KIND[stopKind()];
+  const card=$("cafeCard"), list=$("cafes"), my=++cafeReq, stops=b.stops||[];
+  if(!stops.length){ card.hidden=true; return; }
+  card.hidden=false;
+  $("cafeTitle").textContent=stops.length>1?K.title.replace("your stop","your stops"):K.title;
+  if(layer) layer.eachLayer(l=>{ if(l.options&&l.options.isPlace) layer.removeLayer(l); });
+  const searchRow=(sp,title,sub)=>`<li><span class="nm"><b>${title}</b><span>${sub}</span></span><a href="${gSearch(sp,K)}" target="_blank" rel="noopener">Search</a></li>`;
+  const head=(k,sp)=>stops.length>1?`<li class="grp">Stop ${k+1} · mile ${mi(sp.km)}</li>`:"";
+  const parts=stops.map((st,k)=>{ const sp=m.pts[st.i]; return head(k,sp)+searchRow(sp,`Looking for ${K.look}…`,"Taking long? Search it yourself."); });
+  list.innerHTML=parts.join("");
+  const newStops=bare(b); let moved=false;
+  for(let k=0;k<stops.length;k++){
+    const i0=stops[k].i, sp0=m.pts[i0]; let cafes=null, chosen=i0;
+    try{
+      // better stops: if nothing is right here, try a point just before or after that keeps you as dry
+      const cands=opts.refined?[i0]:[i0,i0-1,i0+1].filter(c=>c>0&&c<m.pts.length-1&&!newStops.some((x,j)=>j!==k&&Math.abs(x.i-c)<2));
+      for(const c of cands){
+        if(c!==i0){ const trial=newStops.map((x,j)=>j===k?{i:c,p:x.p}:x); const sim=simulateStops(m,b.dep,trial); if(sim.exposure>b.exposure+0.1) continue; }
+        const found=await placesNear(m,c,K,3000); if(my!==cafeReq) return;
+        if(found.length){ cafes=found; chosen=c; break; }
+      }
+      if(!cafes){ cafes=await placesNear(m,i0,K,8000); chosen=i0; }
+    }catch(e){ if(my!==cafeReq) return; parts[k]=head(k,sp0)+searchRow(sp0,"The places list is busy right now","You can still look them up near this stop."); list.innerHTML=parts.join(""); continue; }
+    if(my!==cafeReq) return;
+    if(chosen!==i0){ newStops[k].i=chosen; moved=true; }
+    const sp=m.pts[chosen];
+    cafes=cafes.map(c=>({...c,d:distKm(sp,c)})).sort((a,c)=>a.d-c.d).slice(0,stops.length>1?4:6);
+    parts[k]=head(k,sp)+(cafes.length
+      ? cafes.map(c=>`<li><div class="nm"><b>${esc(c.name)}</b><span>${(c.d*0.621).toFixed(1)} mi off the route · ${KIND_WORD[c.kind]||"food"}${c.hours?" · "+esc(c.hours):""}</span></div><a href="https://www.google.com/maps/dir/?api=1&destination=${c.lat},${c.lon}&travelmode=driving" target="_blank" rel="noopener">Go</a></li>`).join("")+searchRow(sp,"","More options near this stop")
+      : searchRow(sp,"Nothing found right by this stop","A gas station along the way works too, or search nearby."));
+    list.innerHTML=parts.join("");
+    if(layer&&!moved) cafes.forEach(c=>L.marker([c.lat,c.lon],{isPlace:true,icon:L.divIcon({className:"",html:`<div class="pin cafe">${KIND_ICON[c.kind]||"☕"}</div>`,iconSize:[16,16],iconAnchor:[8,8]}),title:c.name}).bindPopup(`<b>${esc(c.name)}</b><br>${(c.d*0.621).toFixed(1)} mi from your stop`).addTo(layer));
+  }
+  // a stop moved toward real places: redraw the plan once with the new spot
+  if(moved&&res&&my===cafeReq){ const nb=simulateStops(m,b.dep,newStops); await render(m,res,nb,custom||false,{refined:true}); }
+}
+
+
+function buildLegend(){
+  $("legend").innerHTML=INT_WORD.map((w,i)=>`<span><i style="background:${COLORS[i]}"></i>${w[0].toUpperCase()+w.slice(1)}</span>`).join("");
+}
+
+function prefs(){ return {stops:stopKind()!=="none", earliest:0, windowH:+$("window").value, patience:(document.querySelector('input[name="patience"]:checked')||{}).value||"mid"}; }
+
+let lastModel=null, hereCoords=null;
+async function runDemo(){
+  const now=Date.now(); lastModel=demoModel(now); lastModel.id="demo"+now; lastModel.fetchedAt=now; const p=prefs();
+  await render(lastModel, plan(lastModel, now, p.earliest, p.windowH, p.patience, p.stops));
+}
+
+$("hereBtn").addEventListener("click",()=>{
+  if(!navigator.geolocation){ setStatus("This browser can't share your location. Type a city instead.",true); return; }
+  setStatus("Finding you…");
+  navigator.geolocation.getCurrentPosition(pos=>{
+    hereCoords={lat:pos.coords.latitude, lon:pos.coords.longitude, name:"My location"};
+    $("from").value="My location"; setStatus("");
+  },()=>setStatus("This page can't use your location. Type your city instead.",true),{timeout:10000});
+});
+$("from").addEventListener("input",()=>{ if($("from").value!=="My location") hereCoords=null; });
+
+// Some hosts run the page in a frame that blocks form submits, so the button drives the search directly.
+$("tripForm").addEventListener("submit", e=>{ e.preventDefault(); findTrip(); });
+["from","to"].forEach(id=>$(id).addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); findTrip(); } }));
+["from","to"].forEach(id=>$(id).addEventListener("input",()=>setStatus("")));
+$("goBtn").addEventListener("click", ()=>findTrip());
+let busy=false;
+async function findTrip(){
+  if(busy) return;
+  const fromQ=$("from").value.trim(), toQ=$("to").value.trim();
+  if(!fromQ||!toQ){ setStatus("Type where you're leaving from and where you're going.",true); return; }
+  const btn=$("goBtn"); btn.disabled=true; busy=true;
+  try{
+    try{ localStorage.setItem("raingap", JSON.stringify({from:fromQ,to:toQ,...prefs()})); }catch(_){}
+    setStatus("Finding places…");
+    const step=async(name,fn)=>{ try{ return await fn(); }catch(e){ const err=new Error(name+": "+(e&&e.message||"failed")); err.svc=true; err.plain=!!(e&&e.plainMsg); err.orig=e; throw err; } };
+    const A = hereCoords && fromQ==="My location" ? [{...hereCoords,label:"My location"}] : await step("place search", ()=>geocodeAll(fromQ));
+    await sleep(1100); // be polite to the free geocoder
+    const B = await step("place search", ()=>geocodeAll(toQ));
+    const {a,b}=pickPair(A,B);
+    setStatus(`${a.label} → ${b.label}`);
+    setStatus("Getting the route…");
+    const rt=await step("routing", ()=>route(a,b)); const {pts,seg}=samplePoints(rt); const line=rt.coords.map(c=>[c[1],c[0]]);
+    setStatus(`Checking the rain forecast at ${pts.length} points along ${mi(rt.totalM/1000)} miles…`);
+    const series=await step("weather", ()=>forecast(pts));
+    const m={id:Math.random().toString(36).slice(2),pts,seg,series,line,from:a.label.split(",")[0],to:b.label.split(",")[0],demo:false,fetchedAt:Date.now()};
+    if(drive.on) endDrive();
+    lastModel=m; const p=prefs();
+    setStatus("Comparing departure times and stops…");
+    await render(m, plan(m, Date.now(), p.earliest, p.windowH, p.patience, p.stops));
+    setStatus(""); collapseForm(`${a.label.split(",")[0]} → ${b.label.split(",")[0]}`);
+  }catch(err){
+    if(err&&err.svc&&err.plain) err=err.orig;
+    setStatus((err&&err.message&&(err.plainMsg||(!err.svc&&!/^HTTP|Failed to fetch|NetworkError|Load failed/.test(err.message))))?err.message:"Couldn't reach the map or weather service ("+((err&&err.message)||"unknown error")+"). Check your connection and try again.",true);
+  }finally{ btn.disabled=false; busy=false; }
+}
+
+// re-plan instantly when preferences change
+document.querySelectorAll('#window,input[name="patience"]').forEach(el=>el.addEventListener("change",async()=>{
+  if(!lastModel) return; const p=prefs(); const now=lastModel.demo?Date.now():Date.now();
+  if(lastModel.demo){ await runDemo(); return; }
+  await render(lastModel, plan(lastModel, now, p.earliest, p.windowH, p.patience, p.stops));
+}));
+
+try{ const s=JSON.parse(localStorage.getItem("raingap")||"null"); if(s){ $("from").value=s.from||""; $("to").value=s.to||""; } }catch(_){}
+/* ===== VERSE OF THE DAY (KJV) ===== */
+const VERSES=[
+  ["The LORD shall preserve thy going out and thy coming in from this time forth, and even for evermore.","Psalm 121:8"],
+  ["He telleth the number of the stars; he calleth them all by their names.","Psalm 147:4"],
+  ["Who covereth the heaven with clouds, who prepareth rain for the earth, who maketh grass to grow upon the mountains.","Psalm 147:8"],
+  ["When thou passest through the waters, I will be with thee.","Isaiah 43:2"],
+  ["I do set my bow in the cloud, and it shall be for a token of a covenant between me and the earth.","Genesis 9:13"],
+  ["And he arose, and rebuked the wind, and said unto the sea, Peace, be still. And the wind ceased, and there was a great calm.","Mark 4:39"],
+  ["For he shall give his angels charge over thee, to keep thee in all thy ways.","Psalm 91:11"],
+  ["Be not afraid, neither be thou dismayed: for the LORD thy God is with thee whithersoever thou goest.","Joshua 1:9"],
+  ["The heavens declare the glory of God; and the firmament sheweth his handywork.","Psalm 19:1"],
+  ["He causeth the vapours to ascend from the ends of the earth; he maketh lightnings for the rain; he bringeth the wind out of his treasuries.","Psalm 135:7"]
+];
+let verseIdx=Math.floor((Date.now()-new Date(new Date().getFullYear(),0,0))/86400000)%VERSES.length;
+function showVerse(){ $("verseText").textContent=VERSES[verseIdx][0]; $("verseRef").textContent=VERSES[verseIdx][1]+" · KJV"; }
+$("verse").addEventListener("click",()=>{ verseIdx=(verseIdx+1)%VERSES.length; showVerse(); });
+showVerse();
+function skyByHour(){ const h=new Date().getHours(); document.querySelector(".scene").classList.toggle("night", h<6||h>=19); }
+skyByHour(); setInterval(skyByHour,10*60000);
+
+buildLegend();
+runDemo();
+</script>
+</body>
+</html>
