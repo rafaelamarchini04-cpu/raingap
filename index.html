@@ -147,6 +147,12 @@ section.card{background:var(--surface);border:1px solid var(--line);box-shadow:v
 .cafes .grp{font:600 1rem var(--display);color:var(--accent);padding:14px 0 4px;border-top:0}
 button.soft{align-self:flex-start;background:var(--accent-soft);color:var(--accent);border-color:transparent}
 .ac{position:relative;flex:1;min-width:0}
+.pick-link{align-self:flex-start;background:none;border:0;padding:2px 0;font:700 .88rem var(--body);color:var(--accent);cursor:pointer}
+.picker{position:fixed;inset:0;z-index:100;background:color-mix(in srgb,var(--fg) 45%,transparent);display:flex;padding:calc(env(safe-area-inset-top,0px) + 12px) max(12px,env(safe-area-inset-right,0px)) calc(env(safe-area-inset-bottom,0px) + 12px) max(12px,env(safe-area-inset-left,0px))}
+.picker-card{flex:1;display:flex;flex-direction:column;gap:12px;background:var(--surface);border-radius:24px;padding:16px;max-width:640px;margin:0 auto;width:100%}
+.picker-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.pick-cancel{background:none;border:0;padding:0;color:var(--accent);font-weight:800}
+#pickMap{flex:1;min-height:240px;border-radius:18px;border:1px solid var(--line)}
 .ac-list{position:absolute;left:0;right:0;top:calc(100% + 6px);z-index:40;list-style:none;margin:0;padding:6px;background:var(--surface);border:1px solid var(--line);border-radius:18px;box-shadow:0 12px 30px rgba(20,30,80,.22);max-height:320px;overflow:auto}
 .ac-list li{display:flex;flex-direction:column;gap:1px;padding:10px 12px;border-radius:12px;cursor:pointer}
 .ac-list li b{font-weight:800;overflow-wrap:anywhere}
@@ -237,10 +243,12 @@ details.more[open]>summary{margin-bottom:20px}
         <div class="ac"><input id="from" name="from" placeholder="Address or city" required role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="from-list"><ul class="ac-list" id="from-list" role="listbox" hidden></ul></div>
         <button type="button" id="hereBtn" title="Use where I am now">📍 Here</button>
       </div>
+      <button type="button" class="pick-link" data-for="from">🗺️ Can't find it? Pick on map</button>
     </div>
     <div class="field">
       <label class="label" for="to">To</label>
       <div class="ac"><input id="to" name="to" placeholder="Address or city" required role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="to-list"><ul class="ac-list" id="to-list" role="listbox" hidden></ul></div>
+      <button type="button" class="pick-link" data-for="to">🗺️ Can't find it? Pick on map</button>
     </div>
     <div class="field">
       <label class="label" for="window">When could you leave?</label>
@@ -334,6 +342,15 @@ details.more[open]>summary{margin-bottom:20px}
   </button>
 
   <p class="note">Forecast: Open-Meteo 15-minute precipitation. Routing: OSRM. Pop-up storms are hard to predict more than an hour or two ahead, so re-check right before you leave.</p>
+</div>
+
+<div class="picker" id="picker" hidden role="dialog" aria-modal="true" aria-labelledby="pickerTitle">
+  <div class="picker-card">
+    <div class="picker-head"><h2 id="pickerTitle">Tap the exact spot</h2><button type="button" id="pickerClose" class="pick-cancel">Cancel</button></div>
+    <div id="pickMap"></div>
+    <p class="note" id="pickNote">Zoom in and tap your building or driveway.</p>
+    <button class="primary" id="pickUse" type="button" disabled>Use this spot</button>
+  </div>
 </div>
 
 <script>
@@ -450,6 +467,7 @@ async function geocodeAll(q){
   q=q.trim(); const ll=q.match(/^(-?\d+(\.\d+)?)\s*,\s*(-?\d+(\.\d+)?)$/);
   if(ll) return [{lat:+ll[1], lon:+ll[3], label:q}];
   let out=[];
+  try{ out=await esriFind(q,null,6); if(out.length) return out; }catch(e){}
   if(looksLikeAddress(q)){ try{ out=(await census(q)).map(x=>({lat:x.lat,lon:x.lon,label:x.label})); if(out.length) return out; }catch(e){} }
   try{
     const j=await getJSON("https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=6&q="+encodeURIComponent(q));
@@ -484,6 +502,18 @@ async function photon(q,near,limit=6){
     });
   } finally{ clearTimeout(timer); }
 }
+// Esri World Geocoder: commercial-quality addresses (finds new streets), free for search without a key
+const ESRI="https://geocode.arcgis.com/arcgis/rest/services/World/GeocodeServer";
+async function getJSONt(url,ms=7000){ const ctl=new AbortController(), t=setTimeout(()=>ctl.abort(),ms); try{ const r=await fetch(url,{signal:ctl.signal}); if(!r.ok) throw new Error("HTTP "+r.status); return await r.json(); } finally{ clearTimeout(t); } }
+async function esriSuggest(q,near){
+  const j=await getJSONt(`${ESRI}/suggest?f=json&maxSuggestions=6&text=${encodeURIComponent(q)}`+(near?`&location=${near.lon.toFixed(4)},${near.lat.toFixed(4)}`:""));
+  return (j.suggestions||[]).filter(x=>!x.isCollection).map(x=>{ const t=x.text.replace(/, USA$/,""), parts=t.split(", ");
+    return {main:parts[0], sub:parts.slice(1).join(", "), label:t, text:x.text, magicKey:x.magicKey, needsResolve:true}; });
+}
+async function esriFind(text,magicKey,max=1){
+  const j=await getJSONt(`${ESRI}/findAddressCandidates?f=json&maxLocations=${max}&SingleLine=${encodeURIComponent(text)}`+(magicKey?`&magicKey=${encodeURIComponent(magicKey)}`:""));
+  return (j.candidates||[]).filter(c=>c.score>=75).map(c=>({lat:c.location.y, lon:c.location.x, label:c.address.replace(/, USA$/,"")}));
+}
 // US Census address lookup (free, covers nearly every US street address). Loaded as JSONP, which works without CORS.
 const looksLikeAddress=q=>/^\s*\d+[a-z]?\s+\S+\s+\S+/i.test(q);
 let censusN=0;
@@ -509,7 +539,16 @@ const picked={from:null,to:null};
 function setupAC(id){
   const input=$(id), list=$(id+"-list"); let timer=null, items=[], active=-1, req=0;
   const close=()=>{ list.hidden=true; input.setAttribute("aria-expanded","false"); active=-1; };
-  const choose=k=>{ const it=items[k]; if(!it) return; input.value=it.label; picked[id]={lat:it.lat,lon:it.lon,label:it.label}; input.classList.add("picked"); if(id==="from") hereCoords=null; close(); setStatus(""); };
+  const choose=async k=>{ const it=items[k]; if(!it) return; input.value=it.label; if(id==="from") hereCoords=null; close(); setStatus("");
+    if(it.needsResolve){
+      const mine=++req; picked[id]=null; input.classList.remove("picked"); setStatus("Finding that address…");
+      try{ const r=(await esriFind(it.text,it.magicKey))[0]; if(mine!==req) return;
+        if(r){ picked[id]={lat:r.lat,lon:r.lon,label:it.label}; input.classList.add("picked"); setStatus(""); }
+        else setStatus("Couldn't pin that one down. Try another suggestion or Pick on map.",true);
+      }catch(e){ if(mine===req) setStatus("Couldn't reach the address search. Try again or Pick on map.",true); }
+      return;
+    }
+    picked[id]={lat:it.lat,lon:it.lon,label:it.label}; input.classList.add("picked"); };
   const draw=()=>{
     if(!items.length){ list.innerHTML='<li class="ac-note">No matches yet. Keep typing, or add the city.</li>'; }
     else list.innerHTML=items.map((it,k)=>`<li role="option" id="${id}-opt-${k}" aria-selected="${k===active}" data-k="${k}"><b>${esc(it.main)}</b>${it.sub?`<span>${esc(it.sub)}</span>`:""}</li>`).join("");
@@ -521,14 +560,14 @@ function setupAC(id){
     list.innerHTML='<li class="ac-note">Searching…</li>'; list.hidden=false; input.setAttribute("aria-expanded","true");
     timer=setTimeout(async()=>{
       const my=++req, other=picked[id==="from"?"to":"from"]||(id==="to"&&hereCoords)||null;
-      const tasks=[photon(q,other,6)]; if(looksLikeAddress(q)) tasks.push(census(q));
-      const out=await Promise.allSettled(tasks); if(my!==req) return;
-      const ph=out[0].status==="fulfilled"?out[0].value:[], ce=out[1]&&out[1].status==="fulfilled"?out[1].value:[];
-      items=[...ce,...ph]; active=-1;
+      const out=await Promise.allSettled([esriSuggest(q,other), photon(q,other,6)]); if(my!==req) return;
+      const es=out[0].status==="fulfilled"?out[0].value:[], ph=out[1].status==="fulfilled"?out[1].value:[];
+      let ce=[]; if(!es.length&&looksLikeAddress(q)){ try{ ce=await census(q); }catch(_){} if(my!==req) return; }
+      items=[...es.slice(0,5),...ce,...ph.slice(0,es.length?2:6)]; active=-1;
       if(!items.length&&out.every(o=>o.status==="rejected")){ const e=out[0].reason||{}; list.innerHTML=`<li class="ac-note">Suggestions didn't load (${esc(e.name==="AbortError"?"timed out":e.message||"error")}). You can still tap Find my dry window.</li>`; list.hidden=false; return; }
       if(!items.length&&looksLikeAddress(q)){ list.innerHTML='<li class="ac-note">No match yet. Add the city and state, like "50 Ventures Dr, St Augustine, FL".</li>'; list.hidden=false; return; }
       draw();
-    },looksLikeAddress(q)?600:300);
+    },250);
   });
   input.addEventListener("keydown",e=>{
     if(list.hidden||!items.length) return;
@@ -637,12 +676,12 @@ async function render(m, res, b=res.best, custom=false, opts={}){
   for(const st of stops) names.push(m.demo ? m.names[st.i] : await nameFor(m, st.i));
   const steps=[m.driving
     ? `<li><time>${fmt(b.dep)}</time><div><b>You're on the road</b> (${esc(m.how)})</div></li>`
-    : `<li><time>${fmt(b.dep)}</time><div><b>Leave ${esc(m.from)}</b>${b.dep>res.first.dep+60000?` (wait ${mins((b.dep-res.first.dep)/60000)})`:" (now)"}</div></li>`];
+    : `<li><time>${fmt(b.dep)}</time><div><b>Leave ${/^(\d|📍)/.test(m.from)?"from ":""}${esc(m.from)}</b>${b.dep>res.first.dep+60000?` (wait ${mins((b.dep-res.first.dep)/60000)})`:" (now)"}</div></li>`];
   stops.forEach((st,k)=>{
     const sp=m.pts[st.i], label=stops.length>1?`Stop ${k+1}`:(custom==="break"?"Take a break":"Stop");
     steps.push(`<li><time>${fmt(st.at)}</time><div><b>${label} ${names[k]?"in "+esc(names[k]):"here"}</b> for about ${st.p} min, mile ${mi(sp.km)}.${k===stops.length-1?" "+KIND[stopKind()].listed:""}</div></li>`);
   });
-  steps.push(`<li><time>${fmt(b.arrive)}</time><div><b>Arrive in ${esc(m.to)}</b></div></li>`);
+  steps.push(`<li><time>${fmt(b.arrive)}</time><div><b>Arrive ${/^(\d|📍)/.test(m.to)?"at":"in"} ${esc(m.to)}</b></div></li>`);
   const saved = base.wet - b.wet;
   const verdictTitle = m.driving ? (stops.length ? "☕ A stop is coming up" : b.wet<1 ? "☀️ Dry the rest of the way" : "🌧️ Rain ahead, a stop won't help") : custom==="break" ? "☀️ Dry, with a break halfway" : custom ? (b.wet<1?(stops.length>1?"☀️ Your stops keep you dry!":"☀️ Your stop keeps you dry!"):(stops.length>1?"☂️ Your plan with the stops":"☂️ Your plan with the stop")) : b.wet<1 ? (base.wet<1 ? "☀️ Go now, it's dry the whole way!" : "☀️ You can make it dry!") : (saved>0 ? "☂️ This is the driest option" : "🌧️ No dry window in this range");
   let maps="";
@@ -746,6 +785,47 @@ $("stretches").addEventListener("click",async e=>{
   await render(m,curRes,fix,true);
   await showStretches(m,curRes,dep);
   $("verdict").scrollIntoView({behavior:"smooth",block:"start"});
+});
+
+/* ===== PICK ON MAP ===== */
+let pickMap=null, pickMarker=null, pickFor=null, pickPt=null;
+const pinIcon=()=>L.divIcon({className:"",html:'<div class="pin" style="font-size:30px">📍</div>',iconSize:[30,30],iconAnchor:[15,30]});
+function setPin(pt){ pickPt=pt; if(pickMarker) pickMarker.setLatLng([pt.lat,pt.lon]); else pickMarker=L.marker([pt.lat,pt.lon],{icon:pinIcon()}).addTo(pickMap); $("pickUse").disabled=false; $("pickNote").textContent="Got it. Tap again to move the pin."; }
+async function openPicker(id){
+  if(!window.L){ setStatus("The map needs an internet connection.",true); return; }
+  pickFor=id; pickPt=null; $("pickUse").disabled=true; $("pickNote").textContent="Zoom in and tap your building or driveway.";
+  $("pickerTitle").textContent=id==="from"?"Tap where you're leaving from":"Tap where you're going";
+  $("picker").hidden=false;
+  if(!pickMap){
+    pickMap=L.map("pickMap",{zoomControl:true});
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:'&copy; OpenStreetMap'}).addTo(pickMap);
+    pickMap.on("click",e=>setPin({lat:e.latlng.lat,lon:e.latlng.lng}));
+  }
+  if(pickMarker){ pickMarker.remove(); pickMarker=null; }
+  let c=picked[id], z=17;
+  if(!c){ const q=$(id).value.trim(); if(q.length>=3&&q!=="My location"){ try{ const r=await photon(q,null,1); if(r[0]){ c=r[0]; z=15; } }catch(_){} } }
+  if(!c){ c=picked[id==="from"?"to":"from"]||(hereCoords&&{lat:hereCoords.lat,lon:hereCoords.lon}); z=12; }
+  setTimeout(()=>{ pickMap.invalidateSize(); if(c) pickMap.setView([c.lat,c.lon],z); else pickMap.setView([39.5,-98.35],4); if(picked[id]) setPin(picked[id]); },60);
+}
+function closePicker(){ $("picker").hidden=true; const b=document.querySelector(`.pick-link[data-for="${pickFor}"]`); if(b) b.focus(); }
+async function spotLabel(pt){
+  try{
+    const j=await getJSON(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&lat=${pt.lat}&lon=${pt.lon}`);
+    const a=j.address||{}, street=a.road?((a.house_number?a.house_number+" ":"")+a.road):"", town=a.city||a.town||a.village||a.hamlet||a.suburb||"";
+    const t=[street, town].filter(Boolean).join(", "); if(t) return "📍 Pin near "+t;
+  }catch(_){}
+  return `📍 Pin at ${pt.lat.toFixed(5)}, ${pt.lon.toFixed(5)}`;
+}
+document.querySelectorAll(".pick-link").forEach(b=>b.addEventListener("click",()=>openPicker(b.dataset.for)));
+$("pickerClose").addEventListener("click",closePicker);
+$("picker").addEventListener("click",e=>{ if(e.target.id==="picker") closePicker(); });
+document.addEventListener("keydown",e=>{ if(e.key==="Escape"&&!$("picker").hidden) closePicker(); });
+$("pickUse").addEventListener("click",async()=>{
+  if(!pickPt) return; const btn=$("pickUse"); btn.disabled=true; btn.textContent="Saving…";
+  const label=await spotLabel(pickPt);
+  picked[pickFor]={lat:pickPt.lat,lon:pickPt.lon,label}; const inp=$(pickFor); inp.value=label; inp.classList.add("picked");
+  if(pickFor==="from") hereCoords=null;
+  btn.textContent="Use this spot"; setStatus(""); closePicker();
 });
 
 /* ===== FRESHNESS & RE-CHECK ===== */
