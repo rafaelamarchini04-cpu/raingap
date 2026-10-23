@@ -1,7 +1,7 @@
 {
   "name": "Rain Gap",
   "short_name": "Rain Gap",
-  "description": "Finds when to leave, and where to pull over, so the storms pass you by.",
+  "description": "Plan your drive around the rain.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

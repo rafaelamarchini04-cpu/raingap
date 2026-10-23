@@ -13,9 +13,6 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Rain Gap">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@400;600;800&family=JetBrains+Mono:wght@500;700&display=swap">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <style>
@@ -25,9 +22,9 @@
   --dry:#edf1fb; --r1:#8fdcae; --r2:#ffd166; --r3:#ff9b6a; --r4:#ff5d84;
   --starfield:radial-gradient(circle at 20% 30%, #b8c4ff88 0 1px, transparent 1.6px), radial-gradient(circle at 70% 80%, #ffc7dc99 0 1px, transparent 1.6px);
   --cloud:#cfd8f3; --sun:#ffcf4d; --car:#ff7aa2; --shadow:0 6px 20px rgba(80,100,180,.10);
-  --display:"Fredoka", "Avenir Next Rounded", "Arial Rounded MT Bold", system-ui, sans-serif;
-  --body:"Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --mono:"JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --display:-apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --body:-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono:-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
@@ -66,10 +63,10 @@ header{display:flex;flex-direction:column;gap:6px}
 @keyframes fall{0%{transform:translateY(-6px);opacity:0}20%{opacity:1}100%{transform:translateY(26px);opacity:0}}
 @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-2px)}}
 @keyframes spin{to{transform:rotate(360deg)}}
-h1{font:700 2.4rem/1 var(--display);letter-spacing:-.01em;margin:0;text-wrap:balance}
+h1{font:800 2.3rem/1 var(--display);letter-spacing:.04em;text-transform:uppercase;margin:0;text-wrap:balance}
 h1 span{color:var(--accent)}
 .sub{color:var(--muted);margin:0;max-width:52ch}
-h2{font:600 1.25rem/1.2 var(--display);margin:0;text-wrap:balance}
+h2{font:700 1.25rem/1.2 var(--display);letter-spacing:-.01em;margin:0;text-wrap:balance}
 .label{font:800 .74rem/1 var(--body);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
 form{background:var(--surface);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:14px}
 .field{display:flex;flex-direction:column;gap:6px;min-width:0}
@@ -89,7 +86,7 @@ button:disabled{opacity:.6;cursor:progress}
 .demo-tag{align-self:flex-start;font:800 .76rem var(--body);padding:5px 10px;border-radius:99px;background:var(--accent-soft);color:var(--accent)}
 .steps{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
 .steps li{display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:baseline}
-.steps time{white-space:nowrap;font:600 1rem var(--mono);font-variant-numeric:tabular-nums;color:var(--accent)}
+.steps time{white-space:nowrap;font:700 1rem var(--mono);font-variant-numeric:tabular-nums;color:var(--accent)}
 .steps b{font-weight:700}
 .steps a{color:var(--accent)}
 .compare{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -115,6 +112,7 @@ section.card{background:var(--surface);border:1px solid var(--line);box-shadow:v
 .heat .c{height:14px;border-radius:5px}
 .heat .t.best{color:var(--accent);font-weight:600}
 .heat .c.best{outline:2px solid var(--fg);outline-offset:-1px}
+.maybe{background-image:repeating-linear-gradient(135deg,transparent 0 4px,color-mix(in srgb,var(--surface) 70%,transparent) 4px 7px)!important}
 .legend{display:flex;flex-wrap:wrap;gap:10px 14px;font-size:.82rem;color:var(--muted)}
 .legend span{display:inline-flex;align-items:center;gap:6px}
 .legend i{width:14px;height:14px;border-radius:3px;display:inline-block}
@@ -233,7 +231,7 @@ details.more[open]>summary{margin-bottom:20px}
       </g>
     </svg>
     <h1>Rain <span>Gap</span></h1>
-    <p class="sub">Finds when to leave, and where to pull over for coffee or a bite, so the storms pass you by.</p>
+    <p class="sub">Plan your drive around the rain.</p>
   </header>
 
   <form id="tripForm" autocomplete="off">
@@ -277,6 +275,7 @@ details.more[open]>summary{margin-bottom:20px}
         <label><input type="radio" name="kind" value="none">No stop</label>
       </div>
     </div>
+    <label class="switch" for="allChances"><input type="checkbox" id="allChances"><span class="knob" aria-hidden="true"></span><span>Plan around low-chance showers too</span></label>
     <label class="switch" for="lightOk"><input type="checkbox" id="lightOk"><span class="knob" aria-hidden="true"></span><span>I don't mind light rain</span></label>
     <button class="primary" id="goBtn" type="button">Find my dry window</button>
     <p class="status" id="status" aria-live="polite"></p>
@@ -305,6 +304,7 @@ details.more[open]>summary{margin-bottom:20px}
   <section class="card" id="mapCard">
     <h2>Your route</h2>
     <div id="map" role="img" aria-label="Map of the route colored by the rain you'd hit"></div>
+    <label class="switch" for="radarOn"><input type="checkbox" id="radarOn" checked><span class="knob" aria-hidden="true"></span><span>Live radar</span></label>
     <p class="note" id="mapNote">Route colored by the rain on your plan. Tap a stop icon for its name.</p>
   </section>
 
@@ -356,7 +356,7 @@ details.more[open]>summary{margin-bottom:20px}
 <script>
 /* ===== ENGINE (pure) ===== */
 const RAIN_MIN = 0.3; // mm/h counted as rain
-const ENGINE_OPT={lightOk:false}; // "I don't mind light rain"
+const ENGINE_OPT={lightOk:false, allChances:false}; // "I don't mind light rain"
 function wetThr(){ return ENGINE_OPT.lightOk?2.5:RAIN_MIN; }
 function intensity(r){ if(!(r>=RAIN_MIN)) return 0; if(r<2.5) return 1; if(r<7.6) return 2; if(r<16) return 3; return 4; }
 const INT_WORD=["dry","light rain","moderate rain","heavy rain","downpour"];
@@ -369,20 +369,31 @@ function rateAt(s, t){
   const a=s.rate[lo]??0,b=s.rate[hi]??0, f=T[hi]===T[lo]?0:(t-T[lo])/(T[hi]-T[lo]);
   return a+(b-a)*f;
 }
+// chance of rain for the hour (0-100); unknown counts as certain
+function probAt(s,t){
+  if(!s.ptimes||!s.ptimes.length||!s.prob||!s.prob.length) return 100;
+  let k=Math.floor((t-s.ptimes[0])/3600000); k=Math.max(0,Math.min(s.prob.length-1,k));
+  const v=s.prob[k]; return v==null?100:v;
+}
+// a low-chance shower in one model run shouldn't drive the plan: 20% or less counts as nothing, 60%+ counts fully
+function chanceFactor(p){ if(ENGINE_OPT.allChances) return 1; return p>=60?1:p<=20?0:(p-20)/40; }
 function weight(r){ return r<wetThr()?0: r + Math.max(0,r-4)*1.5; }
 
 // stops: [{i: route point index, p: minutes}]
 function simulateStops(m, dep, stops){
   const at={}; for(const st of stops||[]) if(st.i>0&&st.p>0) at[st.i]=(at[st.i]||0)+st.p;
-  let t=dep, exposure=0, wet=0, peak=0; const segs=[], segT=[], done=[];
+  let t=dep, exposure=0, wet=0, peak=0; const segs=[], segsRaw=[], segT=[], segP=[], done=[];
   for(let i=0;i<m.seg.length;i++){
     if(at[i]){ done.push({i,p:at[i],at:t}); t+=at[i]*60000; }
-    segT.push(t); const r0=rateAt(m.series[i],t), t1=t+m.seg[i]*60000, r1=rateAt(m.series[i+1],t1), avg=(r0+r1)/2;
+    segT.push(t); const t1=t+m.seg[i]*60000, p0=probAt(m.series[i],t), p1=probAt(m.series[i+1],t1);
+    const q0=rateAt(m.series[i],t), q1=rateAt(m.series[i+1],t1);
+    const r0=q0*chanceFactor(p0), r1=q1*chanceFactor(p1), avg=(r0+r1)/2;
+    segP.push(Math.max(p0,p1)); segsRaw.push((q0+q1)/2);
     exposure+=weight(avg)*m.seg[i]/60; if(avg>=wetThr()) wet+=m.seg[i]; peak=Math.max(peak,avg);
     segs.push(avg); t=t1;
   }
   segT.push(t);
-  return {dep, stops:done, stopIdx:done.length?done[0].i:-1, pause:done.reduce((a,x)=>a+x.p,0), stopAt:done.length?done[0].at:null, arrive:t, exposure, wet, peak, segs, segT};
+  return {dep, stops:done, stopIdx:done.length?done[0].i:-1, pause:done.reduce((a,x)=>a+x.p,0), stopAt:done.length?done[0].at:null, arrive:t, exposure, wet, peak, segs, segsRaw, segT, segP};
 }
 function simulate(m, dep, stopIdx, pause){ return simulateStops(m, dep, stopIdx>0&&pause>0?[{i:stopIdx,p:pause}]:[]); }
 const bare=p=>p.stops.map(x=>({i:x.i,p:x.p}));
@@ -419,20 +430,26 @@ function plan(m, now, earliestMin, windowH, patience, allowStops=true){
 }
 
 // group the drive into rain stretches
-function stretches(m,p){
-  const out=[]; let cur=null;
-  for(let i=0;i<p.segs.length;i++){
-    const r=p.segs[i];
+function stretches(m,p,raw=false){
+  const out=[]; let cur=null, arr=raw&&p.segsRaw?p.segsRaw:p.segs;
+  for(let i=0;i<arr.length;i++){
+    const r=arr[i];
     if(r>=wetThr()){
-      if(!cur) cur={from:i,to:i,start:p.segT[i],peak:0,min:0,heavyMin:0};
+      if(!cur) cur={from:i,to:i,start:p.segT[i],peak:0,min:0,heavyMin:0,prob:0};
+      cur.prob=Math.max(cur.prob,(p.segP&&p.segP[i])??100);
       cur.to=i; cur.end=p.segT[i+1]; cur.peak=Math.max(cur.peak,r); cur.min+=m.seg[i]; if(r>=7.6) cur.heavyMin+=m.seg[i];
     } else if(cur){ out.push(cur); cur=null; }
   }
   if(cur) out.push(cur);
+  out.forEach(st=>st.maybe=st.prob<60);
   return out;
 }
+const isMaybe=(p,i)=>p.segP&&p.segP[i]<60&&intensity(p.segsRaw?p.segsRaw[i]:p.segs[i])>0;
+const shown=(p,i)=>p.segsRaw?p.segsRaw[i]:p.segs[i];
 // best stop to wait out one stretch, keeping the same departure time
 function stopBefore(m,dep,st,existing=[]){
+  const keep=ENGINE_OPT.allChances; ENGINE_OPT.allChances=true; // the person chose to avoid this shower, so treat it as certain
+  try{
   const base=simulateStops(m,dep,existing); let best=null;
   // prefer stopping shortly before the rain (within ~30 min of driving), then anywhere earlier
   const near=[]; let ahead=0;
@@ -444,6 +461,7 @@ function stopBefore(m,dep,st,existing=[]){
   } }
   if(best) break; }
   return best;
+  } finally{ ENGINE_OPT.allChances=keep; }
 }
 
 // a break near the middle of a dry drive that keeps it dry
@@ -610,15 +628,16 @@ function samplePoints(rt){
 
 async function forecast(pts){
   const lat=pts.map(p=>p.lat.toFixed(3)).join(","), lon=pts.map(p=>p.lon.toFixed(3)).join(",");
-  let j=await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&minutely_15=precipitation&hourly=precipitation&forecast_days=2&timeformat=unixtime`);
+  let j=await getJSON(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&minutely_15=precipitation&hourly=precipitation,precipitation_probability&forecast_days=2&timeformat=unixtime&timezone=auto`);
   if(!Array.isArray(j)) j=[j];
   return j.map(loc=>{
     const m=loc.minutely_15, h=loc.hourly;
+    const extra={ptimes:h.time.map(t=>t*1000), prob:(h.precipitation_probability||[]).map(v=>v??null), tz:loc.timezone};
     if(m&&m.precipitation&&m.precipitation.some(v=>v!=null)){
       // value = mm over the preceding 15 min -> centre it and convert to mm/h
-      return {times:m.time.map(t=>t*1000-450000), rate:m.precipitation.map(v=>(v??0)*4)};
+      return {times:m.time.map(t=>t*1000-450000), rate:m.precipitation.map(v=>(v??0)*4), ...extra};
     }
-    return {times:h.time.map(t=>t*1000-1800000), rate:h.precipitation.map(v=>v??0)};
+    return {times:h.time.map(t=>t*1000-1800000), rate:h.precipitation.map(v=>v??0), ...extra};
   });
 }
 
@@ -651,7 +670,13 @@ function demoModel(now){
 /* ===== UI ===== */
 const $=id=>document.getElementById(id);
 const COLORS=["var(--dry)","var(--r1)","var(--r2)","var(--r3)","var(--r4)"];
-const fmt=t=>new Date(t).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"});
+let TRIP_TZ=null;
+const PHONE_TZ=(()=>{ try{ return Intl.DateTimeFormat().resolvedOptions().timeZone; }catch(_){ return null; } })();
+const fmt=t=>{ try{ return new Date(t).toLocaleTimeString([], {hour:"numeric", minute:"2-digit", ...(TRIP_TZ?{timeZone:TRIP_TZ}:{})}); }catch(_){ return new Date(t).toLocaleTimeString([], {hour:"numeric", minute:"2-digit"}); } };
+function tzNote(){
+  if(!TRIP_TZ||TRIP_TZ===PHONE_TZ) return "";
+  try{ const n=new Intl.DateTimeFormat("en-US",{timeZone:TRIP_TZ,timeZoneName:"long"}).formatToParts(new Date()).find(x=>x.type==="timeZoneName"); return n?` · times in ${n.value}`:""; }catch(_){ return ""; }
+}
 const mins=m=>m<60?`${Math.round(m)} min`:`${Math.floor(m/60)} h ${String(Math.round(m%60)).padStart(2,"0")} min`;
 const mi=km=>Math.round(km*0.621);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -660,7 +685,7 @@ function wetText(p){ return p.wet<1?(p.peak>=RAIN_MIN?"Only light rain":"Dry the
 const ago=t=>{ const mnt=Math.round((Date.now()-t)/60000); return mnt<1?"just now":mnt<60?`${mnt} min ago`:`${Math.floor(mnt/60)} h ${mnt%60} min ago`; };
 
 function strip(p, m, title){
-  const cells=p.segs.map(r=>`<i style="background:${COLORS[intensity(r)]}"></i>`).join("");
+  const cells=p.segs.map((_,i)=>`<i class="${isMaybe(p,i)?"maybe":""}" style="background:${COLORS[intensity(shown(p,i))]}"></i>`).join("");
   let cup="";
   for(const st of p.stops||[]){ const pct=100*m.pts[st.i].km/m.pts[m.pts.length-1].km; cup+=`<b class="cup" style="left:${Math.min(92,Math.max(8,pct)).toFixed(1)}%">${(KIND[stopKind()]||KIND.coffee).icon} ${st.p}m</b>`; }
   return `<div class="strip-row"><div class="strip-head"><span>${esc(title)}</span><span>${fmt(p.dep)} → ${fmt(p.arrive)}</span></div><div class="strip" role="img" aria-label="${esc(title)}: ${esc(wetText(p))}">${cells}${cup}</div></div>`;
@@ -697,6 +722,8 @@ async function render(m, res, b=res.best, custom=false, opts={}){
       <div class="stat"><span>Leaving at ${fmt(base.dep)}</span><strong>${esc(wetText(base))}</strong></div>
     </div>
     ${b.dep-Date.now()>2*3600000?`<p class="warn">⏳ That's ${mins((b.dep-Date.now())/60000)} from now. Storms are hard to predict this far ahead, so tap Re-check before you go.</p>`:""}
+    ${(()=>{ const mb=stretches(m,b,true).filter(x=>x.maybe); if(!mb.length) return "";
+        const x=mb[0]; return `<p class="warn">🌦️ Heads up: possible ${INT_WORD[intensity(x.peak)]} around ${fmt(x.start)}, miles ${mi(m.pts[x.from].km)}–${mi(m.pts[x.to+1].km)} (${Math.round(x.prob)}% chance)${mb.length>1?` and ${mb.length-1} more later`:""}. Want to avoid it anyway? Open More details → Where the rain is and plan a stop.</p>`; })()}
     <p class="fresh" id="fresh" data-t="${m.fetchedAt||Date.now()}"></p>
     <div class="actions">
       <button type="button" class="soft2" id="recheckBtn">↻ Re-check</button>
@@ -723,7 +750,7 @@ async function render(m, res, b=res.best, custom=false, opts={}){
   let h=""; const bestDep=res.bestNoStop.dep;
   for(const r of res.rows){
     const isB=r.dep===b.dep;
-    h+=`<span class="t${isB?" best":""}" title="See rain if I leave at ${fmt(r.dep)}">${fmt(r.dep)}</span>`+r.segs.map(x=>`<i class="c${isB?" best":""}" style="background:${COLORS[intensity(x)]}"></i>`).join("");
+    h+=`<span class="t${isB?" best":""}" title="See rain if I leave at ${fmt(r.dep)}">${fmt(r.dep)}</span>`+r.segs.map((_,i)=>`<i class="c${isB?" best":""}${isMaybe(r,i)?" maybe":""}" style="background:${COLORS[intensity(shown(r,i))]}"></i>`).join("");
   }
   heat.innerHTML=h;
   heat.querySelectorAll(".t").forEach((el,k)=>{ el.dataset.dep=res.rows[k].dep; el.setAttribute("role","button"); el.tabIndex=0; });
@@ -748,12 +775,12 @@ async function nameFor(m,i){
 }
 function fillDepPick(m,res){
   curRes=res; const sel=$("depPick");
-  sel.innerHTML=res.rows.map((r,k)=>`<option value="${r.dep}">${fmt(r.dep)}${k===0?" (earliest)":""} · ${r.wet<1?"dry":mins(r.wet)+" of rain"}</option>`).join("");
+  sel.innerHTML=res.rows.map((r,k)=>`<option value="${r.dep}">${fmt(r.dep)}${k===0?" (earliest)":""} · ${r.wet>=1?mins(r.wet)+" of rain":stretches(curModel||lastModel,r,true).length?"maybe a shower":"dry"}</option>`).join("");
   sel.value=String(res.rows[0].dep); customStops=[]; showStretches(m,res,res.rows[0].dep);
 }
 let strReq=0;
 async function showStretches(m,res,dep){
-  const my=++strReq, p=simulateStops(m,+dep,customStops), list=$("stretches"), sts=stretches(m,p);
+  const my=++strReq, p=simulateStops(m,+dep,customStops), list=$("stretches"), sts=stretches(m,p,true);
   const withStops=customStops.length?` with your ${customStops.length>1?customStops.length+" stops":"stop"}`:"";
   if(!sts.length){ list.innerHTML=`<li style="--sev:var(--r1)"><p>Dry the whole way if you leave at ${fmt(p.dep)}${withStops}. Arrive about ${fmt(p.arrive)}.</p></li>`; return; }
   const sevVar=["var(--line)","var(--r1)","var(--r2)","var(--r3)","var(--r4)"];
@@ -762,7 +789,8 @@ async function showStretches(m,res,dep){
     const heavy=st.heavyMin?` (${mins(st.heavyMin)} of it heavy)`:"";
     return `<li style="--sev:${sevVar[intensity(st.peak)]}" data-k="${k}">
       <span class="when">${fmt(st.start)} – ${fmt(st.end)}</span>
-      <p><b>${mins(st.min)} of ${INT_WORD[intensity(st.peak)]}</b>${heavy}, ${nm?"near "+esc(nm)+", ":""}miles ${a}–${z}.</p>
+      <p><b>${st.maybe?"Possible: ":""}${mins(st.min)} of ${INT_WORD[intensity(st.peak)]}</b>${heavy}, ${nm?"near "+esc(nm)+", ":""}miles ${a}–${z}.${st.prob<100?` <b>${Math.round(st.prob)}% chance.</b>`:""}</p>
+      ${st.maybe?`<span class="msg">Only a ${Math.round(st.prob)}% chance, but you can still plan a stop if you'd rather be safe.</span>`:""}
       ${stopKind()==="none"?`<span class="msg">Pick Coffee, Food or Either above to plan a stop for this.</span>`:st.from>0?`<button type="button" data-k="${k}">${customStops.length?"Add another stop for this":"Plan a stop to wait it out"}</button>`:`<span class="msg">This starts right where you leave. Waiting at home is your stop: try a later departure.</span>`}
       <span class="msg" hidden></span></li>`;
   };
@@ -777,7 +805,7 @@ $("heat").addEventListener("click",e=>{ const t=e.target.closest(".t"); if(!t||!
 $("heat").addEventListener("keydown",e=>{ if((e.key==="Enter"||e.key===" ")&&e.target.classList.contains("t")){ e.preventDefault(); e.target.click(); } });
 $("stretches").addEventListener("click",async e=>{
   const btn=e.target.closest("button[data-k]"); if(!btn||!lastModel) return;
-  const m=lastModel, dep=+$("depPick").value, p=simulateStops(m,dep,customStops), st=stretches(m,p)[+btn.dataset.k];
+  const m=lastModel, dep=+$("depPick").value, p=simulateStops(m,dep,customStops), st=stretches(m,p,true)[+btn.dataset.k];
   const msg=btn.parentElement.querySelector(".msg[hidden]")||btn.nextElementSibling;
   const fix=st&&stopBefore(m,dep,st,customStops);
   if(!fix){ msg.hidden=false; msg.textContent="A stop doesn't help here. This rain sits over the road too long. Try a different departure time."; return; }
@@ -831,7 +859,7 @@ $("pickUse").addEventListener("click",async()=>{
 /* ===== FRESHNESS & RE-CHECK ===== */
 function tickFresh(){
   const el=$("fresh"); if(!el) return; const t=+el.dataset.t, old=Date.now()-t>30*60000;
-  el.textContent=(lastModel&&lastModel.demo)?"Example forecast":`Forecast updated ${ago(t)}${old?". It's getting old, tap Re-check.":""}`;
+  el.textContent=(lastModel&&lastModel.demo)?"Example forecast":`Forecast updated ${ago(t)}${tzNote()}${old?". It's getting old, tap Re-check.":""}`;
   el.classList.toggle("old",old&&!(lastModel&&lastModel.demo));
 }
 setInterval(tickFresh,30000);
@@ -840,7 +868,7 @@ async function recheck(){
   try{
     if(!lastModel||lastModel.demo){ await runDemo(); return; }
     if(drive.on){ await driveCheck(); return; }
-    lastModel.series=await forecast(lastModel.pts); lastModel.fetchedAt=Date.now();
+    lastModel.series=await forecast(lastModel.pts); lastModel.fetchedAt=Date.now(); TRIP_TZ=lastModel.series[0]&&lastModel.series[0].tz||TRIP_TZ;
     const p=prefs(); await render(lastModel, plan(lastModel, Date.now(), p.earliest, p.windowH, p.patience, p.stops));
   }catch(e){ const f=$("fresh"); if(f){ f.textContent="Couldn't re-check. Check your signal and try again."; f.classList.add("old"); } }
   finally{ const b2=$("recheckBtn"); if(b2){ b2.disabled=false; b2.textContent="↻ Re-check"; } }
@@ -848,7 +876,7 @@ async function recheck(){
 function collapseForm(label){
   $("tripForm").hidden=true; $("tripBar").hidden=false; $("tripBarText").textContent=label;
   const win=$("window").selectedOptions[0].textContent.replace("Anytime in the","Leave in the");
-  $("tripBarSub").textContent=[win, KIND[stopKind()]&&stopKind()!=="none"?"stops for "+(stopKind()==="any"?"coffee or food":stopKind()):"no stops", ENGINE_OPT.lightOk?"light rain OK":""].filter(Boolean).join(" · ");
+  $("tripBarSub").textContent=[win, KIND[stopKind()]&&stopKind()!=="none"?"stops for "+(stopKind()==="any"?"coffee or food":stopKind()):"no stops", ENGINE_OPT.lightOk?"light rain OK":"", ENGINE_OPT.allChances?"avoiding low-chance showers":""].filter(Boolean).join(" · ");
 }
 $("editBtn").addEventListener("click",()=>{ $("tripForm").hidden=false; $("tripBar").hidden=true; $("from").focus(); });
 $("lightOk").addEventListener("change",async e=>{
@@ -857,6 +885,12 @@ $("lightOk").addEventListener("change",async e=>{
   if(lastModel.demo) await runDemo(); else await render(lastModel, plan(lastModel, Date.now(), p.earliest, p.windowH, p.patience, p.stops));
 });
 try{ if(localStorage.getItem("raingap-light")==="1"){ $("lightOk").checked=true; ENGINE_OPT.lightOk=true; } }catch(_){}
+$("allChances").addEventListener("change",async e=>{
+  ENGINE_OPT.allChances=e.target.checked; try{ localStorage.setItem("raingap-all", e.target.checked?"1":"0"); }catch(_){}
+  if(!lastModel) return; const p=prefs();
+  if(lastModel.demo) await runDemo(); else await render(lastModel, plan(lastModel, Date.now(), p.earliest, p.windowH, p.patience, p.stops));
+});
+try{ if(localStorage.getItem("raingap-all")==="1"){ $("allChances").checked=true; ENGINE_OPT.allChances=true; } }catch(_){}
 
 /* ===== DRIVE MODE ===== */
 // Re-checks every 10 minutes while this page stays open. Uses GPS when the page is allowed to,
@@ -911,6 +945,7 @@ async function driveCheck(){
     let series;
     try{ series=await forecast(m.pts.slice(k)); }
     catch(e){ title.textContent="📶 Couldn't check right now"; text.textContent="Probably no signal. It will try again in 10 minutes."; meta.textContent=""; return; }
+    TRIP_TZ=series[0]&&series[0].tz||TRIP_TZ;
     const off=m.pts[k];
     const m2={id:Math.random().toString(36).slice(2), pts:m.pts.slice(k).map(pt=>({...pt,km:pt.km-off.km,ci:pt.ci-off.ci})), seg:m.seg.slice(k), series,
       line:m.line.slice(off.ci), names:m.names?m.names.slice(k):undefined, from:"Here", to:m.to, demo:false, driving:true, how, fetchedAt:Date.now()};
@@ -927,7 +962,10 @@ async function driveCheck(){
       msg=`About ${mins(s1.min)} of it. A stop wouldn't help much, so slow down and leave extra space.`;
       key="rain:"+Math.round(s1.start/600000); alertOn=true;
     }else{
-      head="☀️ Dry ahead"; msg=b.peak>=RAIN_MIN?"Only a little light rain on the rest of the way.":"No rain on the rest of the way. Enjoy the drive!"; key="dry";
+      const mb=stretches(m2,b,true).filter(x=>x.maybe);
+      if(mb.length){ const x=mb[0], inMin=Math.max(0,Math.round((x.start-Date.now())/60000));
+        head="🌦️ Probably dry"; msg=`Small chance (${Math.round(x.prob)}%) of ${INT_WORD[intensity(x.peak)]} ${inMin?`in about ${inMin} min`:"right now"}. Watch the radar.`; key="maybe"; }
+      else { head="☀️ Dry ahead"; msg=b.peak>=RAIN_MIN?"Only a little light rain on the rest of the way.":"No rain on the rest of the way. Enjoy the drive!"; key="dry"; }
     }
     title.textContent=head; text.textContent=msg;
     meta.textContent=`Checked ${fmt(Date.now())} · position ${how} · next check ${fmt(Date.now()+10*60000)} · keep this screen open`;
@@ -938,6 +976,27 @@ async function driveCheck(){
     lastModel=m2; await render(m2,res);
   }finally{ driving=false; }
 }
+
+/* ===== LIVE RADAR (RainViewer) ===== */
+let radarLayer=null, radarAt=0, radarTime=null;
+function radarNote(){ $("mapNote").textContent=radarLayer&&radarTime?`Route colored by the forecast on your plan. Blue patches are live radar from ${fmt(radarTime)}, where it's raining right now.`:"Route colored by the forecast on your plan."; }
+function radarWanted(){ return $("radarOn").checked; }
+async function loadRadar(force){
+  if(!map||!window.L) return;
+  if(!radarWanted()){ if(radarLayer){ radarLayer.remove(); radarLayer=null; } radarNote(); return; }
+  if(radarLayer&&!force&&Date.now()-radarAt<5*60000){ radarNote(); return; }
+  try{
+    const j=await getJSONt("https://api.rainviewer.com/public/weather-maps.json");
+    const fr=((j.radar&&j.radar.past)||[]).slice(-1)[0]; if(!fr) throw new Error("no radar");
+    const url=`${j.host}${fr.path}/256/{z}/{x}/{y}/2/1_1.png`;
+    if(radarLayer) radarLayer.setUrl(url);
+    else radarLayer=L.tileLayer(url,{opacity:.65,maxNativeZoom:7,maxZoom:19,zIndex:5,attribution:'Radar &copy; RainViewer'}).addTo(map);
+    radarAt=Date.now(); radarTime=fr.time*1000; radarNote();
+  }catch(e){ $("mapNote").textContent="Route colored by the forecast on your plan. Live radar isn't available right now."; }
+}
+$("radarOn").addEventListener("change",()=>{ try{ localStorage.setItem("raingap-radar",$("radarOn").checked?"1":"0"); }catch(_){} loadRadar(true); });
+try{ if(localStorage.getItem("raingap-radar")==="0") $("radarOn").checked=false; }catch(_){}
+setInterval(()=>loadRadar(true),10*60000);
 
 /* ===== MAP ===== */
 let map=null, layer=null;
@@ -953,7 +1012,7 @@ function drawMap(m,b){
   L.polyline(m.line,{color:cssColor("--fg"),weight:9,opacity:.25}).addTo(layer);
   for(let i=0;i<b.segs.length;i++){
     const part=m.line.slice(m.pts[i].ci, m.pts[i+1].ci+1);
-    if(part.length>1) L.polyline(part,{color:cols[intensity(b.segs[i])],weight:6,opacity:1}).addTo(layer);
+    if(part.length>1) L.polyline(part,{color:cols[intensity(shown(b,i))],weight:6,opacity:1,dashArray:isMaybe(b,i)?"6 8":null}).addTo(layer);
   }
   const dot=L.divIcon({className:"",html:'<div class="end-dot"></div>',iconSize:[14,14],iconAnchor:[7,7]});
   L.marker([m.pts[0].lat,m.pts[0].lon],{icon:dot,title:m.from}).bindPopup("Start: "+esc(m.from)).addTo(layer);
@@ -961,6 +1020,7 @@ function drawMap(m,b){
   (b.stops||[]).forEach((st,k)=>{ const sp=m.pts[st.i];
     L.marker([sp.lat,sp.lon],{icon:L.divIcon({className:"",html:'<div class="pin">📍</div>',iconSize:[20,20],iconAnchor:[10,20]}),title:"Stop "+(k+1)}).bindPopup(`${b.stops.length>1?"Stop "+(k+1)+": ":""}~${st.p} min`).addTo(layer); });
   setTimeout(()=>{ map.invalidateSize(); map.fitBounds(L.latLngBounds(m.line),{padding:[24,24]}); },50);
+  loadRadar(false);
 }
 
 /* ===== COFFEE ===== */
@@ -1072,14 +1132,14 @@ async function loadCafes(m,b,res,custom,opts={}){
 
 
 function buildLegend(){
-  $("legend").innerHTML=INT_WORD.map((w,i)=>`<span><i style="background:${COLORS[i]}"></i>${w[0].toUpperCase()+w.slice(1)}</span>`).join("");
+  $("legend").innerHTML=INT_WORD.map((w,i)=>`<span><i style="background:${COLORS[i]}"></i>${w[0].toUpperCase()+w.slice(1)}</span>`).join("")+`<span><i class="maybe" style="background:${COLORS[2]}"></i>Striped = possible, low chance</span>`;
 }
 
 function prefs(){ return {stops:stopKind()!=="none", earliest:0, windowH:+$("window").value, patience:(document.querySelector('input[name="patience"]:checked')||{}).value||"mid"}; }
 
 let lastModel=null, hereCoords=null;
 async function runDemo(){
-  const now=Date.now(); lastModel=demoModel(now); lastModel.id="demo"+now; lastModel.fetchedAt=now; const p=prefs();
+  const now=Date.now(); TRIP_TZ=null; lastModel=demoModel(now); lastModel.id="demo"+now; lastModel.fetchedAt=now; const p=prefs();
   await render(lastModel, plan(lastModel, now, p.earliest, p.windowH, p.patience, p.stops));
 }
 
@@ -1117,7 +1177,7 @@ async function findTrip(){
     setStatus("Getting the route…");
     const rt=await step("routing", ()=>route(a,b)); const {pts,seg}=samplePoints(rt); const line=rt.coords.map(c=>[c[1],c[0]]);
     setStatus(`Checking the rain forecast at ${pts.length} points along ${mi(rt.totalM/1000)} miles…`);
-    const series=await step("weather", ()=>forecast(pts));
+    const series=await step("weather", ()=>forecast(pts)); TRIP_TZ=series[0]&&series[0].tz||null;
     const m={id:Math.random().toString(36).slice(2),pts,seg,series,line,from:a.label.split(",")[0],to:b.label.split(",")[0],demo:false,fetchedAt:Date.now()};
     if(drive.on) endDrive();
     lastModel=m; const p=prefs();
